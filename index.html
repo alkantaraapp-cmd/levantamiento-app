@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a3c5e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Levantamiento">
+<title>Sistema de Levantamiento</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="screen-login" class="screen active">
+  <div class="login-bg">
+    <div class="login-shape s1"></div>
+    <div class="login-shape s2"></div>
+    <div class="login-shape s3"></div>
+  </div>
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">
+        <div class="logo-title">Sistema de Levantamiento</div>
+        <div class="logo-sub">Gestión de Contribuyentes</div>
+      </div>
+    </div>
+    <div class="login-form">
+      <div class="input-group">
+        <label>Usuario</label>
+        <input type="text" id="login-user" placeholder="Ingresa tu usuario" autocomplete="username">
+      </div>
+      <div class="input-group">
+        <label>Contraseña</label>
+        <div class="pass-wrap">
+          <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+          <button class="pass-toggle" onclick="togglePass()">👁</button>
+        </div>
+      </div>
+      <div id="login-error" class="login-error" style="display:none"></div>
+      <button class="btn-login" onclick="doLogin()">Iniciar sesión</button>
+    </div>
+    <div class="login-version">v2.0 · Offline Ready</div>
+  </div>
+</div>
+
+<!-- ===== MAIN APP ===== -->
+<div id="screen-app" class="screen" style="display:none">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <button class="hamburger" onclick="toggleMenu()" id="menu-btn">☰</button>
+    <div class="header-title" id="header-title">Inicio</div>
+    <div class="header-right">
+      <div id="online-dot" class="online-dot offline" title="Sin conexión"></div>
+      <button class="sync-btn" onclick="syncAll()" title="Sincronizar">⟳</button>
+    </div>
+  </header>
+
+  <!-- SIDE MENU -->
+  <div id="side-overlay" class="side-overlay" onclick="toggleMenu()"></div>
+  <nav id="side-menu" class="side-menu">
+    <div class="menu-user">
+      <div class="menu-avatar" id="menu-avatar">U</div>
+      <div>
+        <div class="menu-name" id="menu-name">Usuario</div>
+        <div class="menu-role" id="menu-role">Empleado</div>
+      </div>
+    </div>
+    <div class="menu-links" id="menu-links"></div>
+    <button class="menu-logout" onclick="doLogout()">⬅ Cerrar sesión</button>
+  </nav>
+
+  <!-- CONTENT AREA -->
+  <div class="app-content" id="app-content">
+
+    <!-- VISTA: INICIO -->
+    <div id="view-home" class="view active">
+      <div class="home-welcome">
+        <div class="welcome-text">Buenos días, <span id="welcome-name">Usuario</span></div>
+        <div class="welcome-sub">Selecciona una opción del menú</div>
+      </div>
+      <div id="home-cards" class="home-cards"></div>
+      <div id="pending-banner" class="pending-banner" style="display:none">
+        <span>📡 <b id="pending-num">0</b> registro(s) pendiente(s) de sincronizar</span>
+        <button onclick="syncAll()">Sincronizar ahora</button>
+      </div>
+    </div>
+
+    <!-- VISTA: FORM 1 - LEVANTAMIENTO DE CONTRIBUYENTES -->
+    <div id="view-form1" class="view">
+      <div class="form-scroll">
+        <div class="form-section-header">
+          <div class="section-icon">👤</div>
+          <div>
+            <div class="section-title">Datos Personales</div>
+            <div class="section-sub">Información del contribuyente</div>
+          </div>
+        </div>
+        <div class="fields-grid">
+          <div class="field-group full"><label>Nombres *</label><input type="text" id="f1_nombres" placeholder="Nombres completos"></div>
+          <div class="field-group full"><label>Apellidos *</label><input type="text" id="f1_apellidos" placeholder="Apellidos completos"></div>
+          <div class="field-group"><label>Cédula *</label><input type="text" id="f1_cedula" placeholder="000-0000000-0" inputmode="numeric"></div>
+          <div class="field-group"><label>Teléfono 1 *</label><input type="tel" id="f1_tel1" placeholder="809-000-0000"></div>
+          <div class="field-group"><label>Teléfono 2</label><input type="tel" id="f1_tel2" placeholder="809-000-0000"></div>
+          <div class="field-group full"><label>Tipo de Cliente *</label><textarea id="f1_tipo_cliente" rows="2" placeholder="Descripción del tipo de cliente"></textarea></div>
+          <div class="field-group"><label>Categoría *</label><input type="text" id="f1_categoria" placeholder="Categoría"></div>
+          <div class="field-group"><label>Tarifa Mensual *</label><input type="text" id="f1_tarifa" placeholder="Ej: RD$1,500"></div>
+        </div>
+
+        <div class="form-section-header">
+          <div class="section-icon">📍</div>
+          <div>
+            <div class="section-title">Dirección</div>
+            <div class="section-sub">Ubicación del contribuyente</div>
+          </div>
+        </div>
+        <div class="fields-grid">
+          <div class="field-group full"><label>Georeferencia</label><input type="text" id="f1_georef" placeholder="Ej: 18.4861° N, 69.9312° W"></div>
+          <div class="field-group"><label>Sector *</label><input type="text" id="f1_sector" placeholder="Sector"></div>
+          <div class="field-group full"><label>Calle *</label><input type="text" id="f1_calle" placeholder="Nombre de la calle y número"></div>
+          <div class="field-group"><label>Casa / Número *</label><input type="text" id="f1_casa_num" placeholder="Ej: Casa #12-B"></div>
+          <div class="field-group full"><label>Referencia</label><textarea id="f1_referencia" rows="2" placeholder="Referencia de ubicación (ej: frente al parque)"></textarea></div>
+          <div class="field-group full">
+            <label>Ubicación GPS</label>
+            <div class="gps-box" id="f1_gps_box">
+              <div class="gps-coords" id="f1_gps_coords">Sin ubicación capturada</div>
+              <button class="btn-gps" onclick="getGPS('f1')">📍 Capturar ubicación</button>
+            </div>
+            <input type="hidden" id="f1_lat"><input type="hidden" id="f1_lng">
+          </div>
+        </div>
+
+        <div class="form-section-header">
+          <div class="section-icon">📢</div>
+          <div>
+            <div class="section-title">Publicidad</div>
+            <div class="section-sub">Información de publicidad comercial</div>
+          </div>
+        </div>
+        <div class="fields-grid">
+          <div class="field-group full">
+            <label>¿Tiene publicidad comercial? *</label>
+            <div class="toggle-group" id="f1_publicidad_toggle">
+              <button class="toggle-btn active" data-val="No" onclick="setToggle('f1_publicidad','No',this)">No</button>
+              <button class="toggle-btn" data-val="Sí" onclick="setToggle('f1_publicidad','Sí',this)">Sí</button>
+            </div>
+            <input type="hidden" id="f1_publicidad" value="No">
+          </div>
+          <div class="field-group full" id="f1_pub_fields" style="display:none">
+            <div class="fields-grid">
+              <div class="field-group full"><label>Tipo de Letrero</label>
+                <select id="f1_tipo_letrero">
+                  <option value="">Selecciona...</option>
+                  <option>Letras Encajonadas</option>
+                  <option>Adosado a la Fachada</option>
+                  <option>Letrero Tipo Bandera</option>
+                  <option>Street Banner</option>
+                  <option>Letrero Tipo Valla</option>
+                  <option>Vallas Publicitarias</option>
+                  <option>Pantallas Publicitarias</option>
+                </select>
+              </div>
+              <div class="field-group"><label>Cantidad</label>
+                <select id="f1_cantidad">${buildNumOptions(1,50)}</select>
+              </div>
+              <div class="field-group"><label>Medida (pies²)</label><input type="text" id="f1_medida" placeholder="Ej: 12.5 ft²"></div>
+            </div>
+          </div>
+          <div class="field-group full">
+            <label>Foto</label>
+            <div class="photo-box" id="f1_photo_box">
+              <img id="f1_photo_preview" style="display:none">
+              <div class="photo-placeholder" id="f1_photo_ph">
+                <span>📷</span>
+                <span>Tomar foto o seleccionar imagen</span>
+              </div>
+              <div class="photo-btns">
+                <button class="btn-photo" onclick="takePhoto('f1')">📷 Cámara</button>
+                <button class="btn-photo" onclick="pickPhoto('f1')">🖼 Galería</button>
+              </div>
+              <input type="file" id="f1_photo_input" accept="image/*" style="display:none" onchange="handlePhoto('f1',this)">
+              <input type="file" id="f1_camera_input" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto('f1',this)">
+            </div>
+            <input type="hidden" id="f1_photo_data">
+          </div>
+          <div class="field-group"><label>Polígono *</label>
+            <select id="f1_poligono">
+              <option value="">Selecciona...</option>
+              ${buildPoliOptions()}
+            </select>
+          </div>
+          <div class="field-group"><label>Fecha *</label><input type="date" id="f1_fecha"></div>
+          <div class="field-group full"><label>Levantado por *</label><input type="text" id="f1_levantado_por" placeholder="Nombre del responsable"></div>
+        </div>
+
+        <button class="btn-submit" onclick="submitForm(1)">💾 Guardar registro</button>
+      </div>
+    </div>
+
+    <!-- VISTA: FORM 2 - LEVANTAMIENTO DE DATOS -->
+    <div id="view-form2" class="view">
+      <div class="form-scroll">
+        <div class="form-section-header">
+          <div class="section-icon">📊</div>
+          <div>
+            <div class="section-title">Levantamiento General</div>
+            <div class="section-sub">Datos de publicidad y señalización</div>
+          </div>
+        </div>
+        <div class="fields-grid">
+          <div class="field-group full"><label>Nombre *</label><input type="text" id="f2_nombre" placeholder="Nombre del contribuyente o negocio"></div>
+          <div class="field-group"><label>RMC *</label><input type="text" id="f2_rmc" placeholder="Número RMC" inputmode="numeric"></div>
+          <div class="field-group full"><label>Tipo de Cliente</label><textarea id="f2_tipo_cliente" rows="2" placeholder="Descripción del tipo de cliente"></textarea></div>
+          <div class="field-group full">
+            <label>Ubicación GPS *</label>
+            <div class="gps-box">
+              <div class="gps-coords" id="f2_gps_coords">Sin ubicación capturada</div>
+              <button class="btn-gps" onclick="getGPS('f2')">📍 Capturar ubicación</button>
+            </div>
+            <input type="hidden" id="f2_lat"><input type="hidden" id="f2_lng">
+          </div>
+          <div class="field-group full"><label>Tipo de Letrero *</label>
+            <select id="f2_tipo_letrero">
+              <option value="">Selecciona...</option>
+              <option>Letras Encajonadas</option>
+              <option>Adosado a la Fachada</option>
+              <option>Letrero Tipo Bandera</option>
+              <option>Street Banner</option>
+              <option>Letrero Tipo Valla</option>
+              <option>Vallas Publicitarias</option>
+              <option>Pantallas Publicitarias</option>
+            </select>
+          </div>
+          <div class="field-group"><label>Característica *</label>
+            <select id="f2_caracteristica">
+              <option value="">Selecciona...</option>
+              <option>1 Cara</option>
+              <option>2 Caras</option>
+            </select>
+          </div>
+          <div class="field-group"><label>Cantidad *</label>
+            <select id="f2_cantidad">${buildNumOptions(1,50)}</select>
+          </div>
+          <div class="field-group full">
+            <label>Foto *</label>
+            <div class="photo-box" id="f2_photo_box">
+              <img id="f2_photo_preview" style="display:none">
+              <div class="photo-placeholder" id="f2_photo_ph">
+                <span>📷</span><span>Tomar foto o seleccionar imagen</span>
+              </div>
+              <div class="photo-btns">
+                <button class="btn-photo" onclick="takePhoto('f2')">📷 Cámara</button>
+                <button class="btn-photo" onclick="pickPhoto('f2')">🖼 Galería</button>
+              </div>
+              <input type="file" id="f2_photo_input" accept="image/*" style="display:none" onchange="handlePhoto('f2',this)">
+              <input type="file" id="f2_camera_input" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto('f2',this)">
+            </div>
+            <input type="hidden" id="f2_photo_data">
+          </div>
+          <div class="field-group"><label>Medida (pies²) *</label><input type="text" id="f2_medida" placeholder="Ej: 12.5 ft²"></div>
+          <div class="field-group"><label>Polígono *</label>
+            <select id="f2_poligono">
+              <option value="">Selecciona...</option>
+              ${buildPoliOptions()}
+            </select>
+          </div>
+          <div class="field-group full"><label>Observación</label><textarea id="f2_observacion" rows="3" placeholder="Observaciones adicionales"></textarea></div>
+          <div class="field-group"><label>Fecha *</label><input type="date" id="f2_fecha"></div>
+          <div class="field-group full"><label>Levantado por *</label><input type="text" id="f2_levantado_por" placeholder="Nombre del responsable"></div>
+        </div>
+        <button class="btn-submit" onclick="submitForm(2)">💾 Guardar registro</button>
+      </div>
+    </div>
+
+    <!-- VISTA: FORM 3 - LEVANTAMIENTO DE CONSTRUCCIÓN -->
+    <div id="view-form3" class="view">
+      <div class="form-scroll">
+        <div class="form-section-header">
+          <div class="section-icon">🏗️</div>
+          <div>
+            <div class="section-title">Levantamiento de Construcción</div>
+            <div class="section-sub">Registro de obra o construcción</div>
+          </div>
+        </div>
+        <div class="fields-grid">
+          <div class="field-group full">
+            <label>Ubicación GPS *</label>
+            <div class="gps-box">
+              <div class="gps-coords" id="f3_gps_coords">Sin ubicación capturada</div>
+              <button class="btn-gps" onclick="getGPS('f3')">📍 Capturar ubicación</button>
+            </div>
+            <input type="hidden" id="f3_lat"><input type="hidden" id="f3_lng">
+          </div>
+          <div class="field-group full">
+            <label>Foto *</label>
+            <div class="photo-box" id="f3_photo_box">
+              <img id="f3_photo_preview" style="display:none">
+              <div class="photo-placeholder" id="f3_photo_ph">
+                <span>📷</span><span>Tomar foto o seleccionar imagen</span>
+              </div>
+              <div class="photo-btns">
+                <button class="btn-photo" onclick="takePhoto('f3')">📷 Cámara</button>
+                <button class="btn-photo" onclick="pickPhoto('f3')">🖼 Galería</button>
+              </div>
+              <input type="file" id="f3_photo_input" accept="image/*" style="display:none" onchange="handlePhoto('f3',this)">
+              <input type="file" id="f3_camera_input" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto('f3',this)">
+            </div>
+            <input type="hidden" id="f3_photo_data">
+          </div>
+          <div class="field-group full"><label>Polígono *</label>
+            <select id="f3_poligono">
+              <option value="">Selecciona...</option>
+              ${buildPoliOptions()}
+            </select>
+          </div>
+          <div class="field-group full"><label>Observaciones</label><textarea id="f3_observacion" rows="4" placeholder="Detalles de la construcción..."></textarea></div>
+          <div class="field-group"><label>Fecha *</label><input type="date" id="f3_fecha"></div>
+          <div class="field-group full"><label>Levantado por *</label><input type="text" id="f3_levantado_por" placeholder="Nombre del responsable"></div>
+        </div>
+        <button class="btn-submit" onclick="submitForm(3)">💾 Guardar registro</button>
+      </div>
+    </div>
+
+    <!-- VISTA: MIS REGISTROS -->
+    <div id="view-history" class="view">
+      <div class="filter-bar">
+        <select id="history-filter" onchange="renderHistory()">
+          <option value="">Todos los formularios</option>
+          <option value="1">Contribuyentes</option>
+          <option value="2">Datos</option>
+          <option value="3">Construcción</option>
+        </select>
+        <select id="history-status" onchange="renderHistory()">
+          <option value="">Todos los estados</option>
+          <option value="pending">Pendientes</option>
+          <option value="synced">Sincronizados</option>
+        </select>
+      </div>
+      <div id="history-list" class="history-list"></div>
+    </div>
+
+    <!-- VISTA: ADMIN - USUARIOS -->
+    <div id="view-admin-users" class="view">
+      <div class="admin-toolbar">
+        <button class="btn-admin-add" onclick="openUserModal()">+ Nuevo usuario</button>
+      </div>
+      <div id="users-list" class="admin-list"></div>
+    </div>
+
+    <!-- VISTA: ADMIN - FORMULARIOS -->
+    <div id="view-admin-forms" class="view">
+      <div class="admin-toolbar">
+        <button class="btn-admin-add" onclick="openFormBuilder()">+ Nuevo formulario</button>
+      </div>
+      <div id="custom-forms-list" class="admin-list"></div>
+    </div>
+
+    <!-- VISTA: REPORTES -->
+    <div id="view-reports" class="view">
+      <div class="report-cards" id="report-cards"></div>
+      <div id="report-table-wrap" class="report-table-wrap"></div>
+    </div>
+
+  </div><!-- end app-content -->
+</div><!-- end screen-app -->
+
+<!-- ===== MODAL USUARIO ===== -->
+<div id="modal-user" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="modal-user-title">Nuevo Usuario</h3>
+      <button class="modal-close" onclick="closeUserModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="input-group"><label>Nombre completo *</label><input type="text" id="mu_nombre" placeholder="Nombre"></div>
+      <div class="input-group"><label>Usuario *</label><input type="text" id="mu_user" placeholder="nombre_usuario"></div>
+      <div class="input-group"><label>Contraseña *</label><input type="password" id="mu_pass" placeholder="Contraseña"></div>
+      <div class="input-group"><label>Rol *</label>
+        <select id="mu_rol">
+          <option value="empleado">Empleado</option>
+          <option value="supervisor">Supervisor</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+      <div class="input-group"><label>Formularios permitidos</label>
+        <div class="perm-checks" id="mu_perms">
+          <label><input type="checkbox" value="1"> Contribuyentes</label>
+          <label><input type="checkbox" value="2"> Datos</label>
+          <label><input type="checkbox" value="3"> Construcción</label>
+        </div>
+      </div>
+      <input type="hidden" id="mu_edit_id">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeUserModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveUser()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL CONSTRUCTOR FORMULARIOS ===== -->
+<div id="modal-formbuilder" class="modal-overlay" style="display:none">
+  <div class="modal-box modal-wide">
+    <div class="modal-head">
+      <h3>Constructor de Formulario</h3>
+      <button class="modal-close" onclick="closeFormBuilder()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="input-group"><label>Nombre del formulario *</label><input type="text" id="fb_name" placeholder="Ej: Levantamiento de Anuncios"></div>
+      <div class="input-group"><label>Ícono (emoji)</label><input type="text" id="fb_icon" placeholder="📋" maxlength="2"></div>
+      <div class="fb-fields" id="fb_fields_list"></div>
+      <button class="btn-add-field" onclick="addBuilderField()">+ Agregar campo</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeFormBuilder()">Cancelar</button>
+      <button class="btn-save" onclick="saveCustomForm()">Guardar formulario</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div id="toast" class="toast"></div>
+
+<!-- ===== MODAL ÉXITO ===== -->
+<div id="modal-ok" class="modal-overlay" style="display:none">
+  <div class="modal-box modal-small">
+    <div class="ok-icon">✅</div>
+    <h3 id="ok-title">Registro guardado</h3>
+    <p id="ok-msg">El registro se guardó correctamente.</p>
+    <button class="btn-save" onclick="closeOkModal()">Aceptar</button>
+  </div>
+</div>
+
+<script>
+// Inline helpers needed before app.js
+function buildNumOptions(from, to) {
+  let opts = `<option value="">Selecciona...</option>`;
+  for (let i = from; i <= to; i++) opts += `<option value="${i}">${i}</option>`;
+  return opts;
+}
+function buildPoliOptions() {
+  const nums = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+  return nums.map(n => `<option value="${n}">${n}</option>`).join('');
+}
+</script>
+<script src="app.js"></script>
+</body>
+</html>
