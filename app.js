@@ -1,15 +1,11 @@
 /* ============================================================
-   CONFIGURACIÓN
+   CONFIGURACIÓN - Pega tu URL de Apps Script aquí
    ============================================================ */
 const CFG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycby21sZnz9WYJOtrYWKDzzpQPe2Q6vGKon31m-Ryyfk/dev',
+  SCRIPT_URL: 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec',
   APP_NAME: 'Sistema de Levantamiento'
 };
 
-/* ============================================================
-   USUARIOS POR DEFECTO
-   Puedes agregar más desde el panel de Admin
-   ============================================================ */
 const DEFAULT_USERS = [
   { id: 1, nombre: 'Administrador', usuario: 'admin', pass: 'admin123', rol: 'admin', forms: [1,2,3] },
   { id: 2, nombre: 'Supervisor',    usuario: 'super', pass: 'super123', rol: 'supervisor', forms: [1,2,3] },
@@ -19,101 +15,40 @@ const DEFAULT_USERS = [
 const FORM_NAMES = {
   1: { name: 'Levantamiento de Contribuyentes', icon: '👤', sheet: 'Contribuyentes' },
   2: { name: 'Levantamiento de Datos',          icon: '📊', sheet: 'Datos' },
-  3: { name: 'Levantamiento de Construcción',   icon: '🏗️', sheet: 'Construccion' },
+  3: { name: 'Levantamiento de Construccion',   icon: '🏗️', sheet: 'Construccion' },
 };
 
-/* ============================================================
-   ESTADO
-   ============================================================ */
+// SOLO campos de texto puro son obligatorios — selects y numéricos son opcionales en validación estricta
+const REQUIRED = {
+  1: ['f1_nombres','f1_apellidos','f1_cedula','f1_tel1','f1_tipo_cliente','f1_categoria','f1_tarifa','f1_sector','f1_calle','f1_casa_num','f1_poligono','f1_fecha','f1_levantado_por'],
+  2: ['f2_nombre','f2_rmc','f2_poligono','f2_fecha','f2_levantado_por'],
+  3: ['f3_poligono','f3_fecha','f3_levantado_por'],
+};
+
 let currentUser = null;
-let db = null;
 let isOnline = navigator.onLine;
 let menuOpen = false;
 
 /* ============================================================
-   INDEXEDDB
-   ============================================================ */
-function openDB() {
-  return new Promise((res, rej) => {
-    const req = indexedDB.open('LevantamientoDB', 2);
-    req.onupgradeneeded = e => {
-      const d = e.target.result;
-      if (!d.objectStoreNames.contains('registros')) {
-        const s = d.createObjectStore('registros', { keyPath: 'id', autoIncrement: true });
-        s.createIndex('formId', 'formId'); s.createIndex('status', 'status');
-      }
-      if (!d.objectStoreNames.contains('usuarios')) {
-        d.createObjectStore('usuarios', { keyPath: 'id', autoIncrement: true });
-      }
-      if (!d.objectStoreNames.contains('custom_forms')) {
-        d.createObjectStore('custom_forms', { keyPath: 'id', autoIncrement: true });
-      }
-    };
-    req.onsuccess = e => { db = e.target.result; res(db); };
-    req.onerror = e => rej(e.target.error);
-  });
-}
-
-function dbAll(store) {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(store, 'readonly');
-    const req = tx.objectStore(store).getAll();
-    req.onsuccess = () => res(req.result);
-    req.onerror = () => rej(req.error);
-  });
-}
-function dbAdd(store, data) {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(store, 'readwrite');
-    const req = tx.objectStore(store).add(data);
-    req.onsuccess = () => res(req.result);
-    req.onerror = () => rej(req.error);
-  });
-}
-function dbPut(store, data) {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(store, 'readwrite');
-    const req = tx.objectStore(store).put(data);
-    req.onsuccess = () => res(req.result);
-    req.onerror = () => rej(req.error);
-  });
-}
-function dbDelete(store, id) {
-  return new Promise((res, rej) => {
-    const tx = db.transaction(store, 'readwrite');
-    const req = tx.objectStore(store).delete(id);
-    req.onsuccess = () => res();
-    req.onerror = () => rej(req.error);
-  });
-}
-
-/* ============================================================
-   USUARIOS (localStorage como cache rápido + IndexedDB)
+   USUARIOS
    ============================================================ */
 function getUsers() {
-  const saved = localStorage.getItem('app_users');
-  return saved ? JSON.parse(saved) : DEFAULT_USERS;
+  try { return JSON.parse(localStorage.getItem('app_users')) || DEFAULT_USERS; } catch(e) { return DEFAULT_USERS; }
 }
-function saveUsers(users) {
-  localStorage.setItem('app_users', JSON.stringify(users));
-}
+function saveUsers(u) { localStorage.setItem('app_users', JSON.stringify(u)); }
 
 /* ============================================================
-   LOGIN / LOGOUT
+   LOGIN
    ============================================================ */
 function doLogin() {
   const u = document.getElementById('login-user').value.trim();
   const p = document.getElementById('login-pass').value;
   const err = document.getElementById('login-error');
 
-  const users = getUsers();
-  const found = users.find(x => x.usuario === u && x.pass === p);
+  if (!u || !p) { err.textContent = '⚠️ Ingresa usuario y contraseña.'; err.style.display = 'block'; return; }
 
-  if (!found) {
-    err.textContent = '⚠️ Usuario o contraseña incorrectos.';
-    err.style.display = 'block';
-    return;
-  }
+  const found = getUsers().find(x => x.usuario === u && x.pass === p);
+  if (!found) { err.textContent = '❌ Usuario o contraseña incorrectos.'; err.style.display = 'block'; return; }
 
   err.style.display = 'none';
   currentUser = found;
@@ -125,21 +60,20 @@ function doLogout() {
   currentUser = null;
   localStorage.removeItem('session');
   document.getElementById('screen-app').style.display = 'none';
-  document.getElementById('screen-login').classList.add('active');
+  document.getElementById('screen-login').style.display = 'flex';
   document.getElementById('login-user').value = '';
   document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').style.display = 'none';
   closeMenu();
 }
 
 function restoreSession() {
-  const s = localStorage.getItem('session');
-  if (s) {
-    currentUser = JSON.parse(s);
-    // Re-validar contra lista de usuarios actualizada
-    const users = getUsers();
-    const valid = users.find(x => x.id === currentUser.id && x.pass === currentUser.pass);
+  try {
+    const saved = JSON.parse(localStorage.getItem('session'));
+    if (!saved) return false;
+    const valid = getUsers().find(x => x.id === saved.id && x.pass === saved.pass);
     if (valid) { currentUser = valid; return true; }
-  }
+  } catch(e) {}
   return false;
 }
 
@@ -152,15 +86,12 @@ function togglePass() {
    INICIAR APP
    ============================================================ */
 function startApp() {
-  document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-login').style.display = 'none';
   document.getElementById('screen-app').style.display = 'block';
-
-  // Header usuario
   document.getElementById('menu-name').textContent = currentUser.nombre;
   document.getElementById('menu-role').textContent = rolLabel(currentUser.rol);
   document.getElementById('menu-avatar').textContent = currentUser.nombre.charAt(0).toUpperCase();
   document.getElementById('welcome-name').textContent = currentUser.nombre.split(' ')[0];
-
   buildMenu();
   buildHomeCards();
   setTodayDates();
@@ -174,110 +105,80 @@ function rolLabel(r) {
 }
 
 /* ============================================================
-   MENÚ LATERAL
+   MENÚ
    ============================================================ */
 function buildMenu() {
   const links = document.getElementById('menu-links');
   const u = currentUser;
   let html = '';
 
-  html += menuSection('Formularios');
+  html += mSection('Formularios');
   u.forms.forEach(fid => {
     const f = FORM_NAMES[fid];
-    if (f) html += menuLink(f.icon, f.name, `showView('form${fid}')`);
+    if (f) html += mLink(f.icon, f.name, `goForm(${fid})`);
+  });
+  getCustomForms().forEach(cf => {
+    html += mLink(cf.icon || '📋', cf.name, `showCustomForm(${cf.id})`);
   });
 
-  // Formularios personalizados
-  const customForms = getCustomForms();
-  customForms.filter(cf => u.forms.includes('cf_'+cf.id) || u.rol === 'admin' || u.rol === 'supervisor')
-    .forEach(cf => {
-      html += menuLink(cf.icon || '📋', cf.name, `showCustomForm(${cf.id})`);
-    });
-
-  html += menuSection('Mis datos');
-  html += menuLink('📋', 'Mis registros', `showView('history')`);
+  html += mSection('Mis datos');
+  html += mLink('📋', 'Mis registros', `goView('history')`);
 
   if (u.rol === 'admin' || u.rol === 'supervisor') {
-    html += menuSection('Reportes');
-    html += menuLink('📈', 'Ver reportes', `showView('reports'); renderReports()`);
+    html += mSection('Reportes');
+    html += mLink('📈', 'Ver reportes', `goView('reports')`);
   }
-
   if (u.rol === 'admin') {
-    html += menuSection('Administración');
-    html += menuLink('👥', 'Gestionar usuarios', `showView('admin-users'); renderUsers()`);
-    html += menuLink('🗂️', 'Gestionar formularios', `showView('admin-forms'); renderCustomForms()`);
+    html += mSection('Administración');
+    html += mLink('👥', 'Gestionar usuarios', `goView('admin-users')`);
+    html += mLink('🗂️', 'Gestionar formularios', `goView('admin-forms')`);
   }
-
   links.innerHTML = html;
 }
 
-function menuSection(title) {
-  return `<div class="menu-section">${title}</div>`;
+function mSection(t) { return `<div class="menu-section">${t}</div>`; }
+function mLink(icon, label, action) {
+  return `<button class="menu-link" onclick="${action}; closeMenu()"><span class="ml-icon">${icon}</span> ${label}</button>`;
 }
-function menuLink(icon, label, action) {
-  return `<button class="menu-link" onclick="${action}; closeMenu()">
-    <span class="ml-icon">${icon}</span> ${label}
-  </button>`;
+
+function goForm(fid) { showView('form' + fid); closeMenu(); }
+function goView(name) {
+  showView(name); closeMenu();
+  if (name === 'history')     renderHistory();
+  if (name === 'reports')     renderReports();
+  if (name === 'admin-users') renderUsers();
+  if (name === 'admin-forms') renderCustomForms();
 }
 
 function buildHomeCards() {
   const u = currentUser;
-  const grid = document.getElementById('home-cards');
   let html = '';
-
   u.forms.forEach(fid => {
     const f = FORM_NAMES[fid];
     if (!f) return;
-    const count = getLocalCount(fid);
     html += `<div class="home-card" onclick="showView('form${fid}')">
       <div class="home-card-icon">${f.icon}</div>
       <div class="home-card-name">${f.name}</div>
-      <div class="home-card-count">${count} registro(s) hoy</div>
     </div>`;
   });
-
   if (u.rol === 'admin' || u.rol === 'supervisor') {
-    html += `<div class="home-card" onclick="showView('reports'); renderReports()">
-      <div class="home-card-icon">📈</div>
-      <div class="home-card-name">Reportes</div>
-      <div class="home-card-count">Ver estadísticas</div>
-    </div>`;
+    html += `<div class="home-card" onclick="goView('reports')"><div class="home-card-icon">📈</div><div class="home-card-name">Reportes</div></div>`;
   }
   if (u.rol === 'admin') {
-    html += `<div class="home-card" onclick="showView('admin-users'); renderUsers()">
-      <div class="home-card-icon">👥</div>
-      <div class="home-card-name">Usuarios</div>
-      <div class="home-card-count">Gestionar accesos</div>
-    </div>`;
+    html += `<div class="home-card" onclick="goView('admin-users')"><div class="home-card-icon">👥</div><div class="home-card-name">Usuarios</div></div>`;
+    html += `<div class="home-card" onclick="goView('admin-forms')"><div class="home-card-icon">🗂️</div><div class="home-card-name">Formularios</div></div>`;
   }
-
-  grid.innerHTML = html;
-}
-
-function getLocalCount(formId) {
-  const all = JSON.parse(localStorage.getItem('registros_cache') || '[]');
-  const today = new Date().toISOString().split('T')[0];
-  return all.filter(r => String(r.formId) === String(formId) && r.fecha && r.fecha.startsWith(today)).length;
+  document.getElementById('home-cards').innerHTML = html;
 }
 
 /* ============================================================
    NAVEGACIÓN
    ============================================================ */
 function showView(name) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('#app-content .view').forEach(v => v.classList.remove('active'));
   const v = document.getElementById('view-' + name);
   if (v) { v.classList.add('active'); v.scrollTop = 0; }
-
-  const titles = {
-    'home': 'Inicio',
-    'form1': 'Contribuyentes',
-    'form2': 'Levantamiento de Datos',
-    'form3': 'Construcción',
-    'history': 'Mis registros',
-    'admin-users': 'Usuarios',
-    'admin-forms': 'Formularios',
-    'reports': 'Reportes'
-  };
+  const titles = { home:'Inicio', form1:'Contribuyentes', form2:'Levantamiento de Datos', form3:'Construcción', history:'Mis registros', 'admin-users':'Usuarios', 'admin-forms':'Formularios', reports:'Reportes' };
   document.getElementById('header-title').textContent = titles[name] || name;
 }
 
@@ -286,31 +187,28 @@ function toggleMenu() {
   document.getElementById('side-menu').classList.toggle('open', menuOpen);
   document.getElementById('side-overlay').classList.toggle('open', menuOpen);
 }
-function closeMenu() { menuOpen = false; document.getElementById('side-menu').classList.remove('open'); document.getElementById('side-overlay').classList.remove('open'); }
+function closeMenu() {
+  menuOpen = false;
+  document.getElementById('side-menu').classList.remove('open');
+  document.getElementById('side-overlay').classList.remove('open');
+}
 
 /* ============================================================
    GPS
    ============================================================ */
 function getGPS(prefix) {
-  const coordsEl = document.getElementById(prefix + '_gps_coords');
-  coordsEl.textContent = '📡 Obteniendo ubicación...';
-
-  if (!navigator.geolocation) {
-    coordsEl.textContent = 'GPS no disponible en este dispositivo';
-    return;
-  }
-
+  const el = document.getElementById(prefix + '_gps_coords');
+  el.textContent = '📡 Obteniendo ubicación...';
+  if (!navigator.geolocation) { el.textContent = 'GPS no disponible'; return; }
   navigator.geolocation.getCurrentPosition(
     pos => {
       const lat = pos.coords.latitude.toFixed(6);
       const lng = pos.coords.longitude.toFixed(6);
       document.getElementById(prefix + '_lat').value = lat;
       document.getElementById(prefix + '_lng').value = lng;
-      coordsEl.textContent = `✅ Lat: ${lat}, Lng: ${lng}`;
+      el.textContent = `✅ Lat: ${lat}, Lng: ${lng}`;
     },
-    err => {
-      coordsEl.textContent = '❌ No se pudo obtener la ubicación';
-    },
+    () => { el.textContent = '❌ No se pudo obtener la ubicación'; },
     { enableHighAccuracy: true, timeout: 10000 }
   );
 }
@@ -318,40 +216,32 @@ function getGPS(prefix) {
 /* ============================================================
    FOTOS
    ============================================================ */
-function takePhoto(prefix) {
-  document.getElementById(prefix + '_camera_input').click();
-}
-function pickPhoto(prefix) {
-  document.getElementById(prefix + '_photo_input').click();
-}
-function handlePhoto(prefix, input) {
+function takePhoto(p) { document.getElementById(p + '_camera_input').click(); }
+function pickPhoto(p) { document.getElementById(p + '_photo_input').click(); }
+function handlePhoto(p, input) {
   const file = input.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
-    const data = e.target.result;
-    document.getElementById(prefix + '_photo_data').value = data;
-    const preview = document.getElementById(prefix + '_photo_preview');
-    const ph = document.getElementById(prefix + '_photo_ph');
-    preview.src = data;
-    preview.style.display = 'block';
+    document.getElementById(p + '_photo_data').value = e.target.result;
+    const prev = document.getElementById(p + '_photo_preview');
+    const ph   = document.getElementById(p + '_photo_ph');
+    prev.src = e.target.result; prev.style.display = 'block';
     if (ph) ph.style.display = 'none';
   };
   reader.readAsDataURL(file);
 }
 
 /* ============================================================
-   TOGGLE (Sí/No)
+   TOGGLE Sí/No
    ============================================================ */
 function setToggle(fieldId, val, btn) {
   document.getElementById(fieldId).value = val;
   btn.closest('.toggle-group').querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-
-  // Mostrar/ocultar campos de publicidad en form1
   if (fieldId === 'f1_publicidad') {
-    const pubFields = document.getElementById('f1_pub_fields');
-    if (pubFields) pubFields.style.display = val === 'Sí' ? 'block' : 'none';
+    const pub = document.getElementById('f1_pub_fields');
+    if (pub) pub.style.display = val === 'Sí' ? 'block' : 'none';
   }
 }
 
@@ -360,12 +250,8 @@ function setToggle(fieldId, val, btn) {
    ============================================================ */
 function setTodayDates() {
   const today = new Date().toISOString().split('T')[0];
-  ['f1_fecha','f2_fecha','f3_fecha'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = today;
-  });
+  ['f1_fecha','f2_fecha','f3_fecha'].forEach(id => { const el = document.getElementById(id); if (el) el.value = today; });
 }
-
 function prefillLevantadoPor() {
   ['f1_levantado_por','f2_levantado_por','f3_levantado_por'].forEach(id => {
     const el = document.getElementById(id);
@@ -374,61 +260,69 @@ function prefillLevantadoPor() {
 }
 
 /* ============================================================
-   SUBMIT FORMULARIOS
+   SUBMIT — validación simple y directa
    ============================================================ */
-const FORM_FIELDS = {
-  1: ['nombres','apellidos','cedula','tel1','tel2','tipo_cliente','categoria','tarifa',
-      'georef','sector','calle','casa_num','referencia','lat','lng',
-      'publicidad','tipo_letrero','cantidad','medida',
-      'photo_data','poligono','fecha','levantado_por'],
-  2: ['nombre','rmc','tipo_cliente','lat','lng',
-      'tipo_letrero','caracteristica','cantidad','photo_data',
-      'medida','poligono','observacion','fecha','levantado_por'],
-  3: ['lat','lng','photo_data','poligono','observacion','fecha','levantado_por'],
-};
-
 async function submitForm(formId) {
-  const prefix = `f${formId}_`;
-  const fields = FORM_FIELDS[formId];
-  const data = { formId, formName: FORM_NAMES[formId]?.name, userId: currentUser.id, userName: currentUser.nombre, status: 'pending', fecha: new Date().toISOString() };
+  const required = REQUIRED[formId];
   let valid = true;
+  let firstErr = null;
 
-  fields.forEach(f => {
-    const el = document.getElementById(prefix + f);
+  // Limpiar errores anteriores en toda la vista
+  document.querySelectorAll(`#view-form${formId} .error`).forEach(el => el.classList.remove('error'));
+
+  // Validar solo los requeridos
+  required.forEach(id => {
+    const el = document.getElementById(id);
     if (!el) return;
-    const val = el.value || '';
-    data[f] = val;
-
-    // Validación básica de requeridos (no photo, no optional)
-    const optionals = ['tel2','referencia','georef','observacion','tipo_letrero','cantidad','medida'];
-    if (!val && !optionals.includes(f) && f !== 'photo_data' && f !== 'lat' && f !== 'lng') {
+    if (!el.value.trim()) {
       el.classList.add('error');
       valid = false;
-    } else {
-      el.classList.remove('error');
+      if (!firstErr) firstErr = el;
     }
   });
 
-  if (!valid) { showToast('⚠️ Completa los campos obligatorios'); return; }
+  if (!valid) {
+    showToast('⚠️ Completa los campos marcados en rojo');
+    if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
 
-  // Guardar en localStorage cache
+  // Recopilar TODOS los campos del formulario (los que existan)
+  const prefix = `f${formId}_`;
+  const data = {
+    formId,
+    sheet: FORM_NAMES[formId].sheet,
+    formName: FORM_NAMES[formId].name,
+    userId: currentUser.id,
+    userName: currentUser.nombre,
+    status: 'pending',
+    fecha: new Date().toISOString(),
+    localId: Date.now()
+  };
+
+  // Recoger todos los inputs/selects/textareas del formulario
+  document.querySelectorAll(`#view-form${formId} input, #view-form${formId} select, #view-form${formId} textarea`).forEach(el => {
+    if (!el.id || el.type === 'file') return;
+    const key = el.id.replace(prefix, '');
+    data[key] = el.value || '';
+  });
+
+  // Guardar en localStorage
   const cache = JSON.parse(localStorage.getItem('registros_cache') || '[]');
-  const newId = Date.now();
-  data.localId = newId;
   cache.push(data);
   localStorage.setItem('registros_cache', JSON.stringify(cache));
 
-  // Intentar enviar online
+  // Sincronizar si hay conexión
   if (isOnline) {
     try {
       await sendToSheets(data);
-      updateCacheStatus(newId, 'synced');
-      showOkModal('✅ Registro enviado', 'El registro se guardó y sincronizó con Google Sheets.');
-    } catch {
-      showOkModal('📥 Guardado offline', 'Sin conexión al servidor. Se sincronizará automáticamente.');
+      updateCacheStatus(data.localId, 'synced');
+      showOkModal('✅ Registro enviado', 'Guardado y sincronizado con Google Sheets correctamente.');
+    } catch(e) {
+      showOkModal('📥 Guardado sin conexión', 'Se guardó localmente. Se enviará a Google Sheets cuando haya internet.');
     }
   } else {
-    showOkModal('📥 Guardado offline', 'Sin internet. El registro se guardará y sincronizará al conectarse.');
+    showOkModal('📥 Guardado sin conexión', 'Sin internet. Se enviará automáticamente al conectarse.');
   }
 
   resetForm(formId);
@@ -442,29 +336,32 @@ function updateCacheStatus(localId, status) {
 }
 
 function resetForm(formId) {
-  const prefix = `f${formId}_`;
-  const fields = FORM_FIELDS[formId];
-  fields.forEach(f => {
-    const el = document.getElementById(prefix + f);
-    if (el) el.value = '';
+  // Limpiar todos los campos del formulario
+  document.querySelectorAll(`#view-form${formId} input, #view-form${formId} select, #view-form${formId} textarea`).forEach(el => {
+    if (el.type === 'file') return;
+    el.value = '';
+    el.classList.remove('error');
   });
-  // Reset foto previews
-  const prev = document.getElementById(prefix + 'photo_preview');
+
+  // Reset fotos
+  const prev = document.getElementById(`f${formId}_photo_preview`);
   if (prev) { prev.style.display = 'none'; prev.src = ''; }
-  const ph = document.getElementById(prefix + 'photo_ph');
+  const ph = document.getElementById(`f${formId}_photo_ph`);
   if (ph) ph.style.display = 'flex';
 
-  // Reset GPS
-  const gps = document.getElementById(prefix + 'gps_coords');
+  // Reset GPS label
+  const gps = document.getElementById(`f${formId}_gps_coords`);
   if (gps) gps.textContent = 'Sin ubicación capturada';
 
-  // Reset toggle publicidad
+  // Reset toggle publicidad form1
   if (formId === 1) {
-    const pubToggle = document.getElementById('f1_publicidad_toggle');
-    if (pubToggle) {
-      pubToggle.querySelectorAll('.toggle-btn').forEach((b,i) => b.classList.toggle('active', i===0));
-      document.getElementById('f1_publicidad').value = 'No';
-      document.getElementById('f1_pub_fields').style.display = 'none';
+    const tog = document.getElementById('f1_publicidad_toggle');
+    if (tog) {
+      tog.querySelectorAll('.toggle-btn').forEach((b,i) => b.classList.toggle('active', i === 0));
+      const pub = document.getElementById('f1_publicidad');
+      if (pub) pub.value = 'No';
+      const pubf = document.getElementById('f1_pub_fields');
+      if (pubf) pubf.style.display = 'none';
     }
   }
 
@@ -476,16 +373,10 @@ function resetForm(formId) {
    SYNC
    ============================================================ */
 async function sendToSheets(data) {
-  // Enviar sin la foto base64 si es muy grande (opcional: enviar aparte)
-  const payload = { ...data };
-  // Mantener foto pero si el script da error por tamaño, comentar la línea de abajo
-  // payload.photo_data = ''; // descomentar si la foto da problemas de tamaño
-
   await fetch(CFG.SCRIPT_URL, {
-    method: 'POST',
-    mode: 'no-cors',
+    method: 'POST', mode: 'no-cors',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(data)
   });
 }
 
@@ -493,26 +384,23 @@ async function syncAll() {
   if (!isOnline) { showToast('Sin conexión a internet'); return; }
   const cache = JSON.parse(localStorage.getItem('registros_cache') || '[]');
   const pending = cache.filter(r => r.status === 'pending');
-  if (!pending.length) { showToast('✅ Todo sincronizado'); return; }
-
+  if (!pending.length) { showToast('✅ Todo está sincronizado'); return; }
   showToast(`⏳ Sincronizando ${pending.length} registro(s)...`);
   let ok = 0;
   for (const r of pending) {
     try { await sendToSheets(r); updateCacheStatus(r.localId, 'synced'); ok++; } catch {}
   }
-  showToast(`✅ ${ok}/${pending.length} sincronizados`);
+  showToast(`✅ ${ok} de ${pending.length} sincronizados`);
   updatePending();
 }
 
-async function updatePending() {
+function updatePending() {
   const cache = JSON.parse(localStorage.getItem('registros_cache') || '[]');
   const n = cache.filter(r => r.status === 'pending').length;
   const banner = document.getElementById('pending-banner');
-  if (banner) {
-    banner.style.display = n > 0 ? 'flex' : 'none';
-    const el = document.getElementById('pending-num');
-    if (el) el.textContent = n;
-  }
+  if (banner) banner.style.display = n > 0 ? 'flex' : 'none';
+  const el = document.getElementById('pending-num');
+  if (el) el.textContent = n;
 }
 
 /* ============================================================
@@ -522,31 +410,29 @@ function renderHistory() {
   const fFilter = document.getElementById('history-filter')?.value;
   const sFilter = document.getElementById('history-status')?.value;
   const list = document.getElementById('history-list');
-
   let cache = JSON.parse(localStorage.getItem('registros_cache') || '[]');
   if (currentUser.rol === 'empleado') cache = cache.filter(r => r.userId === currentUser.id);
   if (fFilter) cache = cache.filter(r => String(r.formId) === fFilter);
   if (sFilter) cache = cache.filter(r => r.status === sFilter);
   cache = [...cache].reverse();
 
-  if (!cache.length) { list.innerHTML = `<div class="history-empty">📭 No hay registros.</div>`; return; }
+  if (!cache.length) { list.innerHTML = `<div class="history-empty">📭 No hay registros aún.</div>`; return; }
 
   list.innerHTML = cache.map(r => {
     const f = FORM_NAMES[r.formId] || { icon: '📋', name: r.formName || 'Formulario' };
-    const statusClass = { pending: 's-pending', synced: 's-synced', error: 's-error' }[r.status] || 's-pending';
-    const statusLabel = { pending: 'Pendiente', synced: 'Sincronizado', error: 'Error' }[r.status] || r.status;
+    const sc = { pending:'s-pending', synced:'s-synced', error:'s-error' }[r.status] || 's-pending';
+    const sl = { pending:'Pendiente', synced:'Sincronizado', error:'Error' }[r.status] || r.status;
     const date = r.fecha ? new Date(r.fecha).toLocaleString('es-DO') : '—';
-    const name = r.nombres || r.nombre || '—';
-
     return `<div class="h-card">
       <div class="h-card-top">
         <div class="h-card-name">${f.icon} ${f.name}</div>
-        <span class="status-pill ${statusClass}">${statusLabel}</span>
+        <span class="status-pill ${sc}">${sl}</span>
       </div>
       <div class="h-card-meta">
-        <span>👤 ${name}</span>
+        <span>👤 ${r.nombres || r.nombre || '—'}</span>
         <span>📅 ${date}</span>
-        <span>📌 ${r.sector || r.poligono || '—'}</span>
+        <span>📌 Polígono: ${r.poligono || '—'}</span>
+        <span>🙍 ${r.userName || '—'}</span>
       </div>
     </div>`;
   }).join('');
@@ -559,65 +445,49 @@ function renderReports() {
   const cache = JSON.parse(localStorage.getItem('registros_cache') || '[]');
   const total = cache.length;
   const pending = cache.filter(r => r.status === 'pending').length;
-  const synced = cache.filter(r => r.status === 'synced').length;
-
+  const synced  = cache.filter(r => r.status === 'synced').length;
   document.getElementById('report-cards').innerHTML = `
     <div class="report-stat"><div class="rs-num">${total}</div><div class="rs-label">Total</div></div>
     <div class="report-stat"><div class="rs-num" style="color:var(--warning)">${pending}</div><div class="rs-label">Pendientes</div></div>
-    <div class="report-stat"><div class="rs-num" style="color:var(--success)">${synced}</div><div class="rs-label">Sincronizados</div></div>
-  `;
-
-  const recent = [...cache].reverse().slice(0, 20);
-  const rows = recent.map(r => {
+    <div class="report-stat"><div class="rs-num" style="color:var(--success)">${synced}</div><div class="rs-label">Sincronizados</div></div>`;
+  const rows = [...cache].reverse().slice(0,30).map(r => {
     const f = FORM_NAMES[r.formId] || { name: r.formName || '—' };
     const date = r.fecha ? new Date(r.fecha).toLocaleString('es-DO') : '—';
-    const statusClass = { pending: 's-pending', synced: 's-synced' }[r.status] || '';
-    const statusLabel = { pending: 'Pendiente', synced: 'Sync' }[r.status] || r.status;
-    return `<tr>
-      <td>${f.name}</td>
-      <td>${r.nombres || r.nombre || '—'}</td>
-      <td>${r.userName || '—'}</td>
-      <td>${date}</td>
-      <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
-    </tr>`;
+    const sc = { pending:'s-pending', synced:'s-synced' }[r.status] || '';
+    const sl = { pending:'Pendiente', synced:'Sync' }[r.status] || r.status;
+    return `<tr><td>${f.name}</td><td>${r.nombres||r.nombre||'—'}</td><td>${r.userName||'—'}</td><td>${date}</td><td><span class="status-pill ${sc}">${sl}</span></td></tr>`;
   }).join('');
-
   document.getElementById('report-table-wrap').innerHTML = `
     <table class="report-table">
-      <thead><tr><th>Formulario</th><th>Contribuyente</th><th>Usuario</th><th>Fecha</th><th>Estado</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Sin registros</td></tr>'}</tbody>
+      <thead><tr><th>Formulario</th><th>Nombre</th><th>Usuario</th><th>Fecha</th><th>Estado</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Sin registros</td></tr>'}</tbody>
     </table>`;
 }
 
 /* ============================================================
-   ADMIN - USUARIOS
+   ADMIN USUARIOS
    ============================================================ */
 function renderUsers() {
-  const users = getUsers();
   const list = document.getElementById('users-list');
-  list.innerHTML = users.map(u => `
+  list.innerHTML = getUsers().map(u => `
     <div class="admin-card">
       <div class="admin-card-info">
         <div class="admin-card-name">${u.nombre}</div>
-        <div class="admin-card-sub">@${u.usuario} · ${rolLabel(u.rol)} · Formularios: ${u.forms.join(', ')}</div>
+        <div class="admin-card-sub">@${u.usuario} · ${rolLabel(u.rol)} · Forms: ${u.forms.join(', ')}</div>
       </div>
       <div class="admin-card-actions">
-        <button class="btn-edit" onclick="openUserModal(${u.id})">✏️</button>
+        <button class="btn-edit" onclick="openUserModal(${u.id})">✏️ Editar</button>
         ${u.id !== currentUser.id ? `<button class="btn-del" onclick="deleteUser(${u.id})">🗑️</button>` : ''}
       </div>
-    </div>
-  `).join('') || '<div class="history-empty">Sin usuarios</div>';
+    </div>`).join('') || '<div class="history-empty">Sin usuarios.</div>';
 }
 
 function openUserModal(id) {
-  document.getElementById('mu_nombre').value = '';
-  document.getElementById('mu_user').value = '';
-  document.getElementById('mu_pass').value = '';
+  ['mu_nombre','mu_user','mu_pass'].forEach(x => document.getElementById(x).value = '');
   document.getElementById('mu_rol').value = 'empleado';
   document.getElementById('mu_edit_id').value = '';
   document.querySelectorAll('#mu_perms input[type=checkbox]').forEach(cb => cb.checked = false);
   document.getElementById('modal-user-title').textContent = id ? 'Editar Usuario' : 'Nuevo Usuario';
-
   if (id) {
     const u = getUsers().find(x => x.id === id);
     if (!u) return;
@@ -626,31 +496,26 @@ function openUserModal(id) {
     document.getElementById('mu_pass').value = u.pass;
     document.getElementById('mu_rol').value = u.rol;
     document.getElementById('mu_edit_id').value = u.id;
-    document.querySelectorAll('#mu_perms input[type=checkbox]').forEach(cb => {
-      cb.checked = u.forms.includes(Number(cb.value)) || u.forms.includes('cf_'+cb.value);
-    });
+    document.querySelectorAll('#mu_perms input[type=checkbox]').forEach(cb => { cb.checked = u.forms.includes(Number(cb.value)); });
   }
   document.getElementById('modal-user').style.display = 'flex';
 }
 function closeUserModal() { document.getElementById('modal-user').style.display = 'none'; }
 
 function saveUser() {
-  const nombre = document.getElementById('mu_nombre').value.trim();
+  const nombre  = document.getElementById('mu_nombre').value.trim();
   const usuario = document.getElementById('mu_user').value.trim();
-  const pass = document.getElementById('mu_pass').value.trim();
-  const rol = document.getElementById('mu_rol').value;
-  const editId = document.getElementById('mu_edit_id').value;
-  const forms = [...document.querySelectorAll('#mu_perms input[type=checkbox]:checked')].map(cb => Number(cb.value));
-
-  if (!nombre || !usuario || !pass) { showToast('⚠️ Completa todos los campos'); return; }
-
+  const pass    = document.getElementById('mu_pass').value.trim();
+  const rol     = document.getElementById('mu_rol').value;
+  const editId  = document.getElementById('mu_edit_id').value;
+  const forms   = [...document.querySelectorAll('#mu_perms input[type=checkbox]:checked')].map(cb => Number(cb.value));
+  if (!nombre || !usuario || !pass) { showToast('⚠️ Completa nombre, usuario y contraseña'); return; }
   const users = getUsers();
   if (editId) {
     const idx = users.findIndex(u => u.id === Number(editId));
     if (idx >= 0) users[idx] = { ...users[idx], nombre, usuario, pass, rol, forms };
   } else {
-    const maxId = Math.max(0, ...users.map(u => u.id));
-    users.push({ id: maxId + 1, nombre, usuario, pass, rol, forms });
+    users.push({ id: Math.max(0, ...users.map(u => u.id)) + 1, nombre, usuario, pass, rol, forms });
   }
   saveUsers(users);
   closeUserModal();
@@ -660,50 +525,42 @@ function saveUser() {
 
 function deleteUser(id) {
   if (!confirm('¿Eliminar este usuario?')) return;
-  const users = getUsers().filter(u => u.id !== id);
-  saveUsers(users);
+  saveUsers(getUsers().filter(u => u.id !== id));
   renderUsers();
   showToast('Usuario eliminado');
 }
 
 /* ============================================================
-   ADMIN - FORMULARIOS PERSONALIZADOS
+   FORMULARIOS PERSONALIZADOS
    ============================================================ */
-function getCustomForms() {
-  return JSON.parse(localStorage.getItem('custom_forms') || '[]');
-}
-function saveCustomForms(forms) {
-  localStorage.setItem('custom_forms', JSON.stringify(forms));
-}
+function getCustomForms() { try { return JSON.parse(localStorage.getItem('custom_forms')) || []; } catch(e) { return []; } }
+function saveCustomForms(f) { localStorage.setItem('custom_forms', JSON.stringify(f)); }
 
 function renderCustomForms() {
-  const forms = getCustomForms();
   const list = document.getElementById('custom-forms-list');
+  const forms = getCustomForms();
   list.innerHTML = forms.map(f => `
     <div class="admin-card">
       <div class="admin-card-info">
-        <div class="admin-card-name">${f.icon || '📋'} ${f.name}</div>
-        <div class="admin-card-sub">${f.fields?.length || 0} campos</div>
+        <div class="admin-card-name">${f.icon||'📋'} ${f.name}</div>
+        <div class="admin-card-sub">${f.fields?.length||0} campos</div>
       </div>
       <div class="admin-card-actions">
         <button class="btn-del" onclick="deleteCustomForm(${f.id})">🗑️</button>
       </div>
-    </div>
-  `).join('') || '<div class="history-empty">No hay formularios personalizados.<br>Crea uno con el botón +</div>';
+    </div>`).join('') || '<div class="history-empty">No hay formularios personalizados.<br>Usa + para crear uno.</div>';
 }
 
 function openFormBuilder() {
   document.getElementById('fb_name').value = '';
   document.getElementById('fb_icon').value = '📋';
   document.getElementById('fb_fields_list').innerHTML = '';
-  addBuilderField(); // al menos un campo
+  addBuilderField();
   document.getElementById('modal-formbuilder').style.display = 'flex';
 }
 function closeFormBuilder() { document.getElementById('modal-formbuilder').style.display = 'none'; }
 
 function addBuilderField() {
-  const container = document.getElementById('fb_fields_list');
-  const idx = container.children.length;
   const div = document.createElement('div');
   div.className = 'fb-field-row';
   div.innerHTML = `
@@ -713,129 +570,89 @@ function addBuilderField() {
       <option value="number">Número</option>
       <option value="date">Fecha</option>
       <option value="textarea">Texto largo</option>
-      <option value="select">Lista</option>
     </select>
-    <button class="fb-del" onclick="this.parentElement.remove()">✕</button>
-  `;
-  container.appendChild(div);
+    <button class="fb-del" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('fb_fields_list').appendChild(div);
 }
 
 function saveCustomForm() {
   const name = document.getElementById('fb_name').value.trim();
   const icon = document.getElementById('fb_icon').value.trim() || '📋';
-  if (!name) { showToast('⚠️ Nombre del formulario requerido'); return; }
-
-  const rows = document.querySelectorAll('.fb-field-row');
+  if (!name) { showToast('⚠️ Escribe un nombre'); return; }
   const fields = [];
-  rows.forEach(row => {
+  document.querySelectorAll('.fb-field-row').forEach(row => {
     const fname = row.querySelector('.fb-fname').value.trim();
-    const ftype = row.querySelector('.fb-ftype').value;
-    if (fname) fields.push({ name: fname, type: ftype });
+    if (fname) fields.push({ name: fname, type: row.querySelector('.fb-ftype').value });
   });
-
   if (!fields.length) { showToast('⚠️ Agrega al menos un campo'); return; }
-
   const forms = getCustomForms();
-  const maxId = Math.max(0, ...forms.map(f => f.id));
-  forms.push({ id: maxId + 1, name, icon, fields, sheet: name.replace(/\s+/g,'_') });
+  forms.push({ id: Math.max(0, ...forms.map(f => f.id)) + 1, name, icon, fields, sheet: name.replace(/\s+/g,'_') });
   saveCustomForms(forms);
-
   closeFormBuilder();
   renderCustomForms();
-  buildMenu(); // actualizar menú lateral
+  buildMenu();
   showToast('✅ Formulario creado');
 }
 
 function deleteCustomForm(id) {
-  if (!confirm('¿Eliminar este formulario?')) return;
-  const forms = getCustomForms().filter(f => f.id !== id);
-  saveCustomForms(forms);
-  renderCustomForms();
-  buildMenu();
-  showToast('Formulario eliminado');
-}
-
-function showCustomForm(id) {
-  const forms = getCustomForms();
-  const cf = forms.find(f => f.id === id);
-  if (!cf) return;
-
-  // Render dinámico del formulario personalizado
-  const content = document.getElementById('app-content');
-  let viewId = 'view-custom-' + id;
-  let existing = document.getElementById(viewId);
-  if (!existing) {
-    existing = document.createElement('div');
-    existing.id = viewId;
-    existing.className = 'view';
-    existing.innerHTML = `<div class="form-scroll">
-      <div class="form-section-header">
-        <div class="section-icon">${cf.icon}</div>
-        <div><div class="section-title">${cf.name}</div><div class="section-sub">Formulario personalizado</div></div>
-      </div>
-      <div class="fields-grid">
-        ${cf.fields.map(f => `
-          <div class="field-group full">
-            <label>${f.name}</label>
-            ${f.type === 'textarea' ? `<textarea id="cf${id}_${sanitizeId(f.name)}" rows="3" placeholder="${f.name}"></textarea>`
-              : f.type === 'select' ? `<select id="cf${id}_${sanitizeId(f.name)}"><option value="">Selecciona...</option></select>`
-              : `<input type="${f.type}" id="cf${id}_${sanitizeId(f.name)}" placeholder="${f.name}">`}
-          </div>
-        `).join('')}
-        <div class="field-group full"><label>Fecha</label><input type="date" id="cf${id}_fecha" value="${new Date().toISOString().split('T')[0]}"></div>
-        <div class="field-group full"><label>Levantado por</label><input type="text" id="cf${id}_levantado" value="${currentUser?.nombre || ''}"></div>
-      </div>
-      <button class="btn-submit" onclick="submitCustomForm(${id})">💾 Guardar registro</button>
-    </div>`;
-    content.appendChild(existing);
-  }
-
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  existing.classList.add('active');
-  document.getElementById('header-title').textContent = cf.name;
+  if (!confirm('¿Eliminar?')) return;
+  saveCustomForms(getCustomForms().filter(f => f.id !== id));
+  renderCustomForms(); buildMenu();
+  showToast('Eliminado');
 }
 
 function sanitizeId(str) { return str.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''); }
 
-function submitCustomForm(id) {
-  const forms = getCustomForms();
-  const cf = forms.find(f => f.id === id);
+function showCustomForm(id) {
+  const cf = getCustomForms().find(f => f.id === id);
   if (!cf) return;
+  const viewId = 'view-custom-' + id;
+  let v = document.getElementById(viewId);
+  if (!v) {
+    v = document.createElement('div');
+    v.id = viewId; v.className = 'view';
+    v.innerHTML = `<div class="form-scroll">
+      <div class="form-section-header">
+        <div class="section-icon">${cf.icon||'📋'}</div>
+        <div><div class="section-title">${cf.name}</div><div class="section-sub">Formulario personalizado</div></div>
+      </div>
+      <div class="fields-grid">
+        ${cf.fields.map(f => `<div class="field-group full">
+          <label>${f.name} *</label>
+          ${f.type==='textarea' ? `<textarea id="cf${id}_${sanitizeId(f.name)}" rows="3" placeholder="${f.name}"></textarea>`
+          : `<input type="${f.type}" id="cf${id}_${sanitizeId(f.name)}" placeholder="${f.name}" inputmode="${f.type==='number'?'numeric':'text'}">`}
+        </div>`).join('')}
+        <div class="field-group"><label>Fecha *</label><input type="date" id="cf${id}_fecha" value="${new Date().toISOString().split('T')[0]}"></div>
+        <div class="field-group full"><label>Levantado por *</label><input type="text" id="cf${id}_levantado" value="${currentUser?.nombre||''}"></div>
+      </div>
+      <button class="btn-submit" onclick="submitCustomForm(${id})">💾 Guardar registro</button>
+    </div>`;
+    document.getElementById('app-content').appendChild(v);
+  }
+  document.querySelectorAll('#app-content .view').forEach(x => x.classList.remove('active'));
+  v.classList.add('active');
+  document.getElementById('header-title').textContent = cf.name;
+}
 
-  const data = { formId: 'cf_'+id, formName: cf.name, sheet: cf.sheet, userId: currentUser.id, userName: currentUser.nombre, status: 'pending', fecha: new Date().toISOString() };
+function submitCustomForm(id) {
+  const cf = getCustomForms().find(f => f.id === id);
+  if (!cf) return;
+  const data = { formId:'cf_'+id, formName:cf.name, sheet:cf.sheet, userId:currentUser.id, userName:currentUser.nombre, status:'pending', fecha:new Date().toISOString(), localId:Date.now() };
+  let valid = true;
   cf.fields.forEach(f => {
     const el = document.getElementById(`cf${id}_${sanitizeId(f.name)}`);
-    data[sanitizeId(f.name)] = el ? el.value : '';
+    const val = el ? el.value.trim() : '';
+    if (!val) { if (el) el.classList.add('error'); valid = false; } else { if (el) el.classList.remove('error'); }
+    data[sanitizeId(f.name)] = val;
   });
+  if (!valid) { showToast('⚠️ Completa todos los campos'); return; }
   data.fecha_registro = document.getElementById(`cf${id}_fecha`)?.value || '';
   data.levantado = document.getElementById(`cf${id}_levantado`)?.value || '';
-
   const cache = JSON.parse(localStorage.getItem('registros_cache') || '[]');
-  data.localId = Date.now();
   cache.push(data);
   localStorage.setItem('registros_cache', JSON.stringify(cache));
-
-  showOkModal('✅ Registro guardado', 'Se guardó localmente. Se sincronizará al conectarse.');
+  showOkModal('✅ Registro guardado', 'Guardado localmente. Se sincronizará al conectarse.');
   updatePending();
-}
-
-/* ============================================================
-   UI HELPERS
-   ============================================================ */
-function showToast(msg, ms = 3000) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), ms);
-}
-
-function showOkModal(title, msg) {
-  document.getElementById('ok-title').textContent = title;
-  document.getElementById('ok-msg').textContent = msg;
-  document.getElementById('modal-ok').style.display = 'flex';
-}
-function closeOkModal() {
-  document.getElementById('modal-ok').style.display = 'none';
-  showView('home');
 }
 
 /* ============================================================
@@ -851,24 +668,37 @@ window.addEventListener('online', updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
 
 /* ============================================================
+   UI HELPERS
+   ============================================================ */
+function showToast(msg, ms=3500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+function showOkModal(title, msg) {
+  document.getElementById('ok-title').textContent = title;
+  document.getElementById('ok-msg').textContent = msg;
+  document.getElementById('modal-ok').style.display = 'flex';
+}
+function closeOkModal() {
+  document.getElementById('modal-ok').style.display = 'none';
+  showView('home');
+}
+
+/* ============================================================
    INIT
    ============================================================ */
-async function init() {
-  await openDB();
+function init() {
   updateOnlineStatus();
-
   if (restoreSession()) {
     startApp();
+  } else {
+    document.getElementById('screen-login').style.display = 'flex';
+    document.getElementById('screen-app').style.display = 'none';
   }
-
-  // Enter en login
   document.getElementById('login-pass')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
   document.getElementById('login-user')?.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pass').focus(); });
-
-  // Service Worker
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  }
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
 init();
