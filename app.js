@@ -263,14 +263,23 @@ function prefillLevantadoPor() {
    SUBMIT — validación simple y directa
    ============================================================ */
 async function submitForm(formId) {
+  // --- ANTI-DUPLICADO: bloquear botón inmediatamente ---
+  const btn = document.querySelector(`#view-form${formId} .btn-submit`);
+  if (btn) {
+    if (btn.disabled) return; // ya está procesando, ignorar toque extra
+    btn.disabled = true;
+    btn.textContent = '⏳ Guardando...';
+    btn.style.opacity = '0.6';
+  }
+
   const required = REQUIRED[formId];
   let valid = true;
   let firstErr = null;
 
-  // Limpiar errores anteriores en toda la vista
+  // Limpiar errores anteriores
   document.querySelectorAll(`#view-form${formId} .error`).forEach(el => el.classList.remove('error'));
 
-  // Validar solo los requeridos
+  // Validar requeridos
   required.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -284,10 +293,12 @@ async function submitForm(formId) {
   if (!valid) {
     showToast('⚠️ Completa los campos marcados en rojo');
     if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Rehabilitar botón si hay error de validación
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar registro'; btn.style.opacity = '1'; }
     return;
   }
 
-  // Recopilar TODOS los campos del formulario (los que existan)
+  // Recopilar datos
   const prefix = `f${formId}_`;
   const data = {
     formId,
@@ -300,33 +311,31 @@ async function submitForm(formId) {
     localId: Date.now()
   };
 
-  // Recoger todos los inputs/selects/textareas del formulario
   document.querySelectorAll(`#view-form${formId} input, #view-form${formId} select, #view-form${formId} textarea`).forEach(el => {
     if (!el.id || el.type === 'file') return;
     const key = el.id.replace(prefix, '');
     data[key] = el.value || '';
   });
 
-  // Guardar en localStorage
+  // Guardar en localStorage PRIMERO (instantáneo, sin esperar red)
   const cache = JSON.parse(localStorage.getItem('registros_cache') || '[]');
   cache.push(data);
   localStorage.setItem('registros_cache', JSON.stringify(cache));
 
-  // Sincronizar si hay conexión
-  if (isOnline) {
-    try {
-      await sendToSheets(data);
-      updateCacheStatus(data.localId, 'synced');
-      showOkModal('✅ Registro enviado', 'Guardado y sincronizado con Google Sheets correctamente.');
-    } catch(e) {
-      showOkModal('📥 Guardado sin conexión', 'Se guardó localmente. Se enviará a Google Sheets cuando haya internet.');
-    }
-  } else {
-    showOkModal('📥 Guardado sin conexión', 'Sin internet. Se enviará automáticamente al conectarse.');
-  }
-
+  // Mostrar éxito inmediatamente — no esperar la red
   resetForm(formId);
   updatePending();
+  if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar registro'; btn.style.opacity = '1'; }
+  showOkModal('✅ Registro guardado', isOnline
+    ? 'Guardado correctamente. Sincronizando con Google Sheets en segundo plano...'
+    : 'Guardado sin conexión. Se enviará automáticamente cuando haya internet.');
+
+  // Sincronizar en segundo plano SIN bloquear la UI
+  if (isOnline) {
+    sendToSheets(data)
+      .then(() => updateCacheStatus(data.localId, 'synced'))
+      .catch(() => {}); // silencioso, ya está guardado localmente
+  }
 }
 
 function updateCacheStatus(localId, status) {
