@@ -2,7 +2,7 @@
    CONFIGURACIÓN
    ============================================================ */
 const CFG = {
-  SCRIPT_URL: 'AKfycbxDBp_my8hbfRGYFA-mrs_urI_2VTA1XrceK-r8Qe2WZYfcrQztVPqMCzu820k8RBdW',
+  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycby21sZnz9WYJOtrYWKDzzpQPe2Q6vGKon31m-Ryyfk/dev/exec',
   APP_NAME: 'Sistema de Levantamiento'
 };
 
