@@ -166,7 +166,7 @@
                 </select>
               </div>
               <div class="field-group"><label>Cantidad</label>
-                <select id="f1_cantidad">${buildNumOptions(1,50)}</select>
+                <input type="number" id="f1_cantidad" placeholder="Ej: 2" min="1" max="50" inputmode="numeric">
               </div>
               <div class="field-group"><label>Medida (pies²)</label><input type="text" id="f1_medida" placeholder="Ej: 12.5 ft²"></div>
             </div>
@@ -190,8 +190,18 @@
           </div>
           <div class="field-group"><label>Polígono *</label>
             <select id="f1_poligono">
-              <option value="">Selecciona...</option>
-              ${buildPoliOptions()}
+              <option value="">Selecciona polígono...</option>
+              <option value="I">I</option>
+              <option value="II">II</option>
+              <option value="III">III</option>
+              <option value="IV">IV</option>
+              <option value="V">V</option>
+              <option value="VI">VI</option>
+              <option value="VII">VII</option>
+              <option value="VIII">VIII</option>
+              <option value="IX">IX</option>
+              <option value="X">X</option>
+              <option value="XI">XI</option>
             </select>
           </div>
           <div class="field-group"><label>Fecha *</label><input type="date" id="f1_fecha"></div>
@@ -244,7 +254,7 @@
             </select>
           </div>
           <div class="field-group"><label>Cantidad *</label>
-            <select id="f2_cantidad">${buildNumOptions(1,50)}</select>
+            <input type="number" id="f2_cantidad" placeholder="Ej: 2" min="1" max="50" inputmode="numeric">
           </div>
           <div class="field-group full">
             <label>Foto *</label>
@@ -265,8 +275,18 @@
           <div class="field-group"><label>Medida (pies²) *</label><input type="text" id="f2_medida" placeholder="Ej: 12.5 ft²"></div>
           <div class="field-group"><label>Polígono *</label>
             <select id="f2_poligono">
-              <option value="">Selecciona...</option>
-              ${buildPoliOptions()}
+              <option value="">Selecciona polígono...</option>
+              <option value="I">I</option>
+              <option value="II">II</option>
+              <option value="III">III</option>
+              <option value="IV">IV</option>
+              <option value="V">V</option>
+              <option value="VI">VI</option>
+              <option value="VII">VII</option>
+              <option value="VIII">VIII</option>
+              <option value="IX">IX</option>
+              <option value="X">X</option>
+              <option value="XI">XI</option>
             </select>
           </div>
           <div class="field-group full"><label>Observación</label><textarea id="f2_observacion" rows="3" placeholder="Observaciones adicionales"></textarea></div>
@@ -314,8 +334,18 @@
           </div>
           <div class="field-group full"><label>Polígono *</label>
             <select id="f3_poligono">
-              <option value="">Selecciona...</option>
-              ${buildPoliOptions()}
+              <option value="">Selecciona polígono...</option>
+              <option value="I">I</option>
+              <option value="II">II</option>
+              <option value="III">III</option>
+              <option value="IV">IV</option>
+              <option value="V">V</option>
+              <option value="VI">VI</option>
+              <option value="VII">VII</option>
+              <option value="VIII">VIII</option>
+              <option value="IX">IX</option>
+              <option value="X">X</option>
+              <option value="XI">XI</option>
             </select>
           </div>
           <div class="field-group full"><label>Observaciones</label><textarea id="f3_observacion" rows="4" placeholder="Detalles de la construcción..."></textarea></div>
