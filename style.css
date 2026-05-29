@@ -34,6 +34,7 @@ html, body {
 #screen-login {
   background: var(--navy-dark);
   display: flex; align-items: center; justify-content: center;
+  z-index: 500;
 }
 .login-bg { position: absolute; inset: 0; overflow: hidden; }
 .login-shape {
@@ -248,10 +249,6 @@ html, body {
 }
 .field-group { display: flex; flex-direction: column; gap: 6px; }
 .field-group.full { grid-column: 1 / -1; }
-.field-group label {
-  font-size: 12px; font-weight: 600; color: var(--muted);
-  text-transform: uppercase; letter-spacing: 0.04em;
-}
 .field-group input, .field-group select, .field-group textarea {
   padding: 11px 13px; border: 1.5px solid var(--border);
   border-radius: 10px; font-size: 14px; color: var(--text);
@@ -263,7 +260,16 @@ html, body {
 }
 .field-group input.error, .field-group select.error, .field-group textarea.error {
   border-color: var(--danger);
+  background: #fff5f5;
+  box-shadow: 0 0 0 3px rgba(229,62,62,0.12);
 }
+
+/* Asterisco rojo en labels con * */
+.field-group label {
+  font-size: 12px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+
 
 /* GPS BOX */
 .gps-box {
@@ -462,3 +468,162 @@ html, body {
   white-space: nowrap; z-index: 999; max-width: 90vw; text-align: center;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ===== RASTREO GPS ===== */
+.rastreo-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 5;
+}
+.rastreo-status { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; }
+.rastreo-dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #94a3b8; transition: background 0.3s;
+}
+.rastreo-dot.active { background: #4ade80; box-shadow: 0 0 0 3px rgba(74,222,128,0.3); animation: pulse 1.5s infinite; }
+.rastreo-dot.paused { background: var(--warning); }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 3px rgba(74,222,128,0.3)} 50%{box-shadow:0 0 0 6px rgba(74,222,128,0.1)} }
+
+.btn-rastreo {
+  background: var(--success); color: white; border: none;
+  padding: 10px 18px; border-radius: 10px; font-size: 14px;
+  font-weight: 700; cursor: pointer; transition: background 0.15s;
+}
+.btn-rastreo.stop { background: var(--danger); }
+
+.rastreo-map {
+  height: 280px; background: #e8f4f8; position: relative;
+  overflow: hidden;
+}
+.map-placeholder {
+  height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px;
+  color: var(--muted); font-size: 14px;
+}
+.map-ph-icon { font-size: 48px; }
+.map-ph-sub { font-size: 12px; opacity: 0.7; }
+
+.rastreo-info { padding: 14px 16px 0; }
+.rastreo-cards-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.rastreo-stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px; display: flex; gap: 10px; align-items: center;
+}
+.rs-icon { font-size: 20px; }
+.rs-val { font-size: 13px; font-weight: 700; color: var(--navy); }
+.rs-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+
+.rastreo-section-title {
+  padding: 16px 16px 8px; font-size: 12px; font-weight: 700;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em;
+}
+.rastreo-historial { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+.punto-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.punto-coords { font-size: 13px; font-weight: 600; color: var(--navy); }
+.punto-time { font-size: 11px; color: var(--muted); }
+.punto-user { font-size: 11px; color: var(--accent2); font-weight: 600; }
+
+/* ===== CONSULTA ===== */
+.consulta-search-bar {
+  padding: 12px 16px; background: var(--navy);
+}
+.consulta-search-bar input {
+  width: 100%; padding: 11px 14px; border: none;
+  border-radius: 10px; font-size: 14px;
+  background: rgba(255,255,255,0.15); color: white; outline: none;
+}
+.consulta-search-bar input::placeholder { color: rgba(255,255,255,0.6); }
+.consulta-search-bar input:focus { background: rgba(255,255,255,0.25); }
+
+.consulta-filters {
+  padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.consulta-filters select, .consulta-filters input[type=date] {
+  flex: 1; min-width: 130px; padding: 8px 10px;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 12px; font-family: inherit; outline: none;
+  background: var(--surface); color: var(--text);
+}
+.btn-limpiar {
+  background: #fee2e2; color: var(--danger); border: none;
+  padding: 8px 12px; border-radius: 8px; font-size: 12px;
+  font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+
+.consulta-stats {
+  padding: 10px 16px; display: flex; gap: 10px; flex-wrap: wrap;
+}
+.cstat {
+  background: var(--navy); color: white;
+  padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+}
+
+.mapa-toggle {
+  display: flex; gap: 0; margin: 0 16px 12px;
+  border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden;
+}
+.tab-btn {
+  flex: 1; padding: 10px; border: none; background: var(--surface);
+  color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s;
+}
+.tab-btn.active { background: var(--navy); color: white; }
+
+.consulta-lista { padding: 0 16px 24px; display: flex; flex-direction: column; gap: 10px; }
+.consulta-card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 12px; padding: 14px 16px; cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.consulta-card:active { transform: scale(0.98); }
+.consulta-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.consulta-card-name { font-size: 15px; font-weight: 700; color: var(--navy); }
+.consulta-card-meta { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 3px; }
+.consulta-card-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.badge {
+  font-size: 11px; font-weight: 600; padding: 3px 9px;
+  border-radius: 20px; background: var(--primary-light);
+}
+.badge-poli { background: #ede9fe; color: #6d28d9; }
+.badge-form { background: #e0f2fe; color: #0369a1; }
+.badge-user { background: #dcfce7; color: #166534; }
+
+/* ===== DETALLE REGISTRO ===== */
+.detalle-content { padding: 16px 16px 40px; }
+.detalle-header {
+  background: var(--navy); border-radius: 14px;
+  padding: 18px; margin-bottom: 16px; color: white;
+}
+.detalle-title { font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 700; }
+.detalle-sub { font-size: 12px; opacity: 0.7; margin-top: 4px; }
+.detalle-section { margin-bottom: 16px; }
+.detalle-section-title {
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 10px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.detalle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.detalle-field { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.detalle-field.full { grid-column: 1 / -1; }
+.detalle-field-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.detalle-field-val { font-size: 14px; font-weight: 600; color: var(--text); word-break: break-all; }
+.detalle-foto {
+  width: 100%; border-radius: 12px; overflow: hidden;
+  background: var(--bg); margin-bottom: 16px;
+}
+.detalle-foto img { width: 100%; max-height: 250px; object-fit: cover; display: block; }
+.btn-back-detalle {
+  background: var(--navy); color: white; border: none;
+  padding: 14px; border-radius: 12px; font-size: 15px;
+  font-weight: 600; cursor: pointer; width: 100%; margin-top: 8px;
+}
