@@ -2,10 +2,9 @@
    CONFIGURACIÓN - Pega tu URL de Apps Script aquí
    ============================================================ */
 const CFG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwUlaCpHQznyWTQYhrkyeyP5FzI5jWo5sBOYnenlfw7jHZERig2ua8-OjJwHAhVmtN_/exec',
+  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwHY-hy1Y1dzrrf3qBozsEpVKRpHF3FsGFPT-l2-YPDcYA0Pab0MWjTaClzwuC_RxfnSA/exec',
   APP_NAME: 'Sistema de Levantamiento'
 };
-
 const DEFAULT_USERS = [
   { id: 1, nombre: 'Administrador', usuario: 'admin', pass: 'admin123', rol: 'admin', forms: [1,2,3] },
   { id: 2, nombre: 'Supervisor',    usuario: 'super', pass: 'super123', rol: 'supervisor', forms: [1,2,3] },
