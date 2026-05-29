@@ -13,7 +13,7 @@
  * ============================================================
  */
 
-const SPREADSHEET_ID = 'TU_SPREADSHEET_ID_AQUI';
+const SPREADSHEET_ID = '19FInbsTOjHE9DE8pUiQnuJg-e_iF0dRF1suqJeqLd-w';
 
 // Nombre de la carpeta en Google Drive donde se guardan las fotos
 const DRIVE_FOLDER_NAME = 'Fotos_Levantamiento';
