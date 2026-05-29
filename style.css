@@ -627,3 +627,10 @@ html, body {
   padding: 14px; border-radius: 12px; font-size: 15px;
   font-weight: 600; cursor: pointer; width: 100%; margin-top: 8px;
 }
+
+/* ===== BOTÓN GUARDANDO - Android fix ===== */
+.btn-submit.processing {
+  background: var(--success) !important;
+  cursor: not-allowed;
+  pointer-events: none;
+}

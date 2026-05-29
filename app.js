@@ -2,7 +2,7 @@
    CONFIGURACIÓN - Pega tu URL de Apps Script aquí
    ============================================================ */
 const CFG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwaaDJv0YTqt7Pwahc_ocvm_o0uX0c-XvpIRelgxxyTmCzkYTq02ilyy1RUaOKFEV9g/exec',
+  SCRIPT_URL: 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec',
   APP_NAME: 'Sistema de Levantamiento'
 };
 
@@ -275,25 +275,23 @@ function prefillLevantadoPor() {
 /* ============================================================
    SUBMIT — validación simple y directa
    ============================================================ */
-async function submitForm(formId) {
-  // --- ANTI-DUPLICADO: bloquear botón inmediatamente ---
-  const btn = document.querySelector(`#view-form${formId} .btn-submit`);
-  if (btn) {
-    if (btn.disabled) return; // ya está procesando, ignorar toque extra
-    btn.disabled = true;
-    btn.textContent = '⏳ Guardando...';
-    btn.style.opacity = '0.6';
-  }
+function submitForm(formId) {
+  // Usar función normal (no async) para evitar problemas en Android Chrome
+  const btn = document.querySelector('#view-form' + formId + ' .btn-submit');
 
+  // Anti-duplicado: si ya tiene clase processing, ignorar
+  if (btn && btn.classList.contains('processing')) return;
+
+  // Validar campos requeridos
   const required = REQUIRED[formId];
   let valid = true;
   let firstErr = null;
 
-  // Limpiar errores anteriores
-  document.querySelectorAll(`#view-form${formId} .error`).forEach(el => el.classList.remove('error'));
+  document.querySelectorAll('#view-form' + formId + ' .error').forEach(function(el) {
+    el.classList.remove('error');
+  });
 
-  // Validar requeridos
-  required.forEach(id => {
+  required.forEach(function(id) {
     const el = document.getElementById(id);
     if (!el) return;
     if (!el.value.trim()) {
@@ -306,15 +304,20 @@ async function submitForm(formId) {
   if (!valid) {
     showToast('⚠️ Completa los campos marcados en rojo');
     if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    // Rehabilitar botón si hay error de validación
-    if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar registro'; btn.style.opacity = '1'; }
     return;
   }
 
-  // Recopilar datos
-  const prefix = `f${formId}_`;
+  // Marcar botón visualmente sin usar disabled (evita bugs en Android)
+  if (btn) {
+    btn.classList.add('processing');
+    btn.textContent = '✅ Guardando...';
+    btn.style.opacity = '0.7';
+  }
+
+  // Recopilar datos del formulario
+  const prefix = 'f' + formId + '_';
   const data = {
-    formId,
+    formId: formId,
     sheet: FORM_NAMES[formId].sheet,
     formName: FORM_NAMES[formId].name,
     userId: currentUser.id,
@@ -324,33 +327,44 @@ async function submitForm(formId) {
     localId: Date.now()
   };
 
-  document.querySelectorAll(`#view-form${formId} input, #view-form${formId} select, #view-form${formId} textarea`).forEach(el => {
+  document.querySelectorAll('#view-form' + formId + ' input, #view-form' + formId + ' select, #view-form' + formId + ' textarea').forEach(function(el) {
     if (!el.id || el.type === 'file') return;
     const key = el.id.replace(prefix, '');
     data[key] = el.value || '';
   });
 
-  // 1. Guardar en localStorage — INSTANTÁNEO
-  const cache = JSON.parse(localStorage.getItem('registros_cache') || '[]');
-  cache.push(data);
-  localStorage.setItem('registros_cache', JSON.stringify(cache));
+  // Guardar en localStorage — INSTANTÁNEO
+  try {
+    const cache = JSON.parse(localStorage.getItem('registros_cache') || '[]');
+    cache.push(data);
+    localStorage.setItem('registros_cache', JSON.stringify(cache));
+  } catch(e) {
+    showToast('❌ Error al guardar. Intenta de nuevo.');
+    if (btn) { btn.classList.remove('processing'); btn.textContent = '💾 Guardar registro'; btn.style.opacity = '1'; }
+    return;
+  }
 
-  // 2. Rehabilitar botón y mostrar éxito SIN esperar la red
-  if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar registro'; btn.style.opacity = '1'; }
+  // Rehabilitar botón y mostrar éxito INMEDIATAMENTE
+  if (btn) {
+    btn.classList.remove('processing');
+    btn.textContent = '💾 Guardar registro';
+    btn.style.opacity = '1';
+  }
+
   resetForm(formId);
   updatePending();
   showOkModal('✅ Registro guardado',
     isOnline
-      ? 'Datos guardados. Se sincronizarán con Google Sheets en segundo plano.'
-      : 'Sin internet. Se enviará automáticamente al conectarse.');
+      ? 'Guardado correctamente. Se sincroniza con Google Sheets en segundo plano.'
+      : 'Sin internet. Se enviará al conectarse a internet.');
 
-  // 3. Sync en segundo plano con setTimeout para NO bloquear nada
+  // Sincronizar en segundo plano — completamente separado
   if (isOnline) {
-    setTimeout(() => {
+    window.setTimeout(function() {
       sendToSheets(data)
-        .then(() => updateCacheStatus(data.localId, 'synced'))
-        .catch(() => {});
-    }, 500);
+        .then(function() { updateCacheStatus(data.localId, 'synced'); })
+        .catch(function() {});
+    }, 1000);
   }
 }
 
