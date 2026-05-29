@@ -2,7 +2,7 @@
    CONFIGURACIÓN - Pega tu URL de Apps Script aquí
    ============================================================ */
 const CFG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyZi6k_WVM8xy5WvFYY14n1utirl5oaMPa-LKvYGQhTDOw_SAZxfl2J_7A6k4gLD2-9/exec',
+  SCRIPT_URL: 'https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbxurp7RTHvWmNzgt9OUkFg6ZHQhQeauDif5hgiWcZp0bbcSXJQdY5qPXjwVO87GNvMW/exec',
   APP_NAME: 'Sistema de Levantamiento'
 };
 
@@ -132,6 +132,12 @@ function buildMenu() {
     html += mSection('Administración');
     html += mLink('👥', 'Gestionar usuarios', `goView('admin-users')`);
     html += mLink('🗂️', 'Gestionar formularios', `goView('admin-forms')`);
+    html += mSection('Herramientas');
+    html += mLink('📡', 'Rastreo GPS', `goView('rastreo')`);
+    html += mLink('🔍', 'Consulta de datos', `goView('consulta')`);
+  } else if (u.rol === 'supervisor') {
+    html += mSection('Herramientas');
+    html += mLink('🔍', 'Consulta de datos', `goView('consulta')`);
   }
   links.innerHTML = html;
 }
@@ -148,6 +154,8 @@ function goView(name) {
   if (name === 'reports')     renderReports();
   if (name === 'admin-users') renderUsers();
   if (name === 'admin-forms') renderCustomForms();
+  if (name === 'consulta')    initConsulta();
+  if (name === 'rastreo')     renderEmpleadosActivos();
 }
 
 function buildHomeCards() {
@@ -167,6 +175,11 @@ function buildHomeCards() {
   if (u.rol === 'admin') {
     html += `<div class="home-card" onclick="goView('admin-users')"><div class="home-card-icon">👥</div><div class="home-card-name">Usuarios</div></div>`;
     html += `<div class="home-card" onclick="goView('admin-forms')"><div class="home-card-icon">🗂️</div><div class="home-card-name">Formularios</div></div>`;
+    html += `<div class="home-card" onclick="goView('rastreo')"><div class="home-card-icon">📡</div><div class="home-card-name">Rastreo GPS</div></div>`;
+    html += `<div class="home-card" onclick="goView('consulta')"><div class="home-card-icon">🔍</div><div class="home-card-name">Consulta de Datos</div></div>`;
+  }
+  if (u.rol === 'supervisor') {
+    html += `<div class="home-card" onclick="goView('consulta')"><div class="home-card-icon">🔍</div><div class="home-card-name">Consulta de Datos</div></div>`;
   }
   document.getElementById('home-cards').innerHTML = html;
 }
@@ -178,7 +191,7 @@ function showView(name) {
   document.querySelectorAll('#app-content .view').forEach(v => v.classList.remove('active'));
   const v = document.getElementById('view-' + name);
   if (v) { v.classList.add('active'); v.scrollTop = 0; }
-  const titles = { home:'Inicio', form1:'Contribuyentes', form2:'Levantamiento de Datos', form3:'Construcción', history:'Mis registros', 'admin-users':'Usuarios', 'admin-forms':'Formularios', reports:'Reportes' };
+  const titles = { home:'Inicio', form1:'Contribuyentes', form2:'Levantamiento de Datos', form3:'Construcción', history:'Mis registros', 'admin-users':'Usuarios', 'admin-forms':'Formularios', reports:'Reportes', rastreo:'Rastreo GPS', consulta:'Consulta de Datos', detalle:'Detalle' };
   document.getElementById('header-title').textContent = titles[name] || name;
 }
 
@@ -317,24 +330,27 @@ async function submitForm(formId) {
     data[key] = el.value || '';
   });
 
-  // Guardar en localStorage PRIMERO (instantáneo, sin esperar red)
+  // 1. Guardar en localStorage — INSTANTÁNEO
   const cache = JSON.parse(localStorage.getItem('registros_cache') || '[]');
   cache.push(data);
   localStorage.setItem('registros_cache', JSON.stringify(cache));
 
-  // Mostrar éxito inmediatamente — no esperar la red
+  // 2. Rehabilitar botón y mostrar éxito SIN esperar la red
+  if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar registro'; btn.style.opacity = '1'; }
   resetForm(formId);
   updatePending();
-  if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar registro'; btn.style.opacity = '1'; }
-  showOkModal('✅ Registro guardado', isOnline
-    ? 'Guardado correctamente. Sincronizando con Google Sheets en segundo plano...'
-    : 'Guardado sin conexión. Se enviará automáticamente cuando haya internet.');
+  showOkModal('✅ Registro guardado',
+    isOnline
+      ? 'Datos guardados. Se sincronizarán con Google Sheets en segundo plano.'
+      : 'Sin internet. Se enviará automáticamente al conectarse.');
 
-  // Sincronizar en segundo plano SIN bloquear la UI
+  // 3. Sync en segundo plano con setTimeout para NO bloquear nada
   if (isOnline) {
-    sendToSheets(data)
-      .then(() => updateCacheStatus(data.localId, 'synced'))
-      .catch(() => {}); // silencioso, ya está guardado localmente
+    setTimeout(() => {
+      sendToSheets(data)
+        .then(() => updateCacheStatus(data.localId, 'synced'))
+        .catch(() => {});
+    }, 500);
   }
 }
 
@@ -382,11 +398,22 @@ function resetForm(formId) {
    SYNC
    ============================================================ */
 async function sendToSheets(data) {
-  await fetch(CFG.SCRIPT_URL, {
-    method: 'POST', mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000); // 30s para dar tiempo a subir foto
+  try {
+    // Enviar TODO incluyendo photo_data — el Apps Script sube la foto a Drive
+    // y guarda solo el enlace en Sheets
+    const payload = { ...data };
+    await fetch(CFG.SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function syncAll() {
@@ -396,10 +423,17 @@ async function syncAll() {
   if (!pending.length) { showToast('✅ Todo está sincronizado'); return; }
   showToast(`⏳ Sincronizando ${pending.length} registro(s)...`);
   let ok = 0;
+  // Enviar uno por uno con timeout — si uno falla continúa con el siguiente
   for (const r of pending) {
-    try { await sendToSheets(r); updateCacheStatus(r.localId, 'synced'); ok++; } catch {}
+    try {
+      await sendToSheets(r);
+      updateCacheStatus(r.localId, 'synced');
+      ok++;
+    } catch(e) {
+      // falló este registro, continuar con el siguiente
+    }
   }
-  showToast(`✅ ${ok} de ${pending.length} sincronizados`);
+  showToast(ok > 0 ? `✅ ${ok} de ${pending.length} sincronizados` : '⚠️ No se pudo sincronizar. Intenta más tarde.');
   updatePending();
 }
 
@@ -711,3 +745,384 @@ function init() {
 }
 
 init();
+
+/* ============================================================
+   MÓDULO: RASTREO GPS
+   ============================================================ */
+let rastreoActivo = false;
+let rastreoWatchId = null;
+let puntosRuta = [];
+let mapaInicializado = false;
+
+function toggleRastreo() {
+  if (rastreoActivo) {
+    detenerRastreo();
+  } else {
+    iniciarRastreo();
+  }
+}
+
+function iniciarRastreo() {
+  if (!navigator.geolocation) {
+    showToast('❌ GPS no disponible en este dispositivo');
+    return;
+  }
+
+  rastreoActivo = true;
+  document.getElementById('rastreo-dot').className = 'rastreo-dot active';
+  document.getElementById('rastreo-label').textContent = 'Rastreando ubicación...';
+  document.getElementById('btn-rastreo').textContent = '⏹ Detener';
+  document.getElementById('btn-rastreo').className = 'btn-rastreo stop';
+
+  // Guardar rastreo en localStorage para que el admin lo vea
+  const sesionRastreo = {
+    userId: currentUser.id,
+    userName: currentUser.nombre,
+    inicio: new Date().toISOString(),
+    puntos: []
+  };
+  localStorage.setItem('rastreo_sesion_' + currentUser.id, JSON.stringify(sesionRastreo));
+
+  rastreoWatchId = navigator.geolocation.watchPosition(
+    pos => actualizarPosicion(pos),
+    err => {
+      showToast('⚠️ Error de GPS: ' + err.message);
+      document.getElementById('rastreo-label').textContent = 'Error de GPS';
+    },
+    { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+  );
+}
+
+function detenerRastreo() {
+  if (rastreoWatchId !== null) {
+    navigator.geolocation.clearWatch(rastreoWatchId);
+    rastreoWatchId = null;
+  }
+  rastreoActivo = false;
+  document.getElementById('rastreo-dot').className = 'rastreo-dot paused';
+  document.getElementById('rastreo-label').textContent = 'Rastreo detenido · ' + puntosRuta.length + ' puntos';
+  document.getElementById('btn-rastreo').textContent = '▶ Reanudar';
+  document.getElementById('btn-rastreo').className = 'btn-rastreo';
+  showToast('Rastreo detenido. ' + puntosRuta.length + ' puntos registrados.');
+}
+
+function actualizarPosicion(pos) {
+  const lat = pos.coords.latitude.toFixed(6);
+  const lng = pos.coords.longitude.toFixed(6);
+  const precision = Math.round(pos.coords.accuracy);
+  const ahora = new Date();
+
+  // Actualizar UI
+  document.getElementById('rs-lat').textContent = lat;
+  document.getElementById('rs-lng').textContent = lng;
+  document.getElementById('rs-precision').textContent = precision + ' m';
+  document.getElementById('rs-tiempo').textContent = ahora.toLocaleTimeString('es-DO');
+
+  // Guardar punto
+  const punto = { lat: parseFloat(lat), lng: parseFloat(lng), precision, hora: ahora.toISOString(), userId: currentUser.id, userName: currentUser.nombre };
+  puntosRuta.push(punto);
+
+  // Guardar en localStorage
+  const key = 'rastreo_sesion_' + currentUser.id;
+  try {
+    const sesion = JSON.parse(localStorage.getItem(key) || '{}');
+    sesion.puntos = puntosRuta;
+    sesion.ultimaPos = punto;
+    localStorage.setItem(key, JSON.stringify(sesion));
+  } catch(e) {}
+
+  // Actualizar mapa
+  actualizarMapa(lat, lng);
+
+  // Actualizar historial
+  renderHistorialPuntos();
+}
+
+function actualizarMapa(lat, lng) {
+  const iframe = document.getElementById('map-iframe');
+  const placeholder = document.getElementById('map-placeholder');
+
+  // Usar OpenStreetMap embed (funciona offline con cache del navegador)
+  const url = `https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(lng)-0.003},${parseFloat(lat)-0.003},${parseFloat(lng)+0.003},${parseFloat(lat)+0.003}&layer=mapnik&marker=${lat},${lng}`;
+
+  if (!mapaInicializado) {
+    placeholder.style.display = 'none';
+    iframe.style.display = 'block';
+    mapaInicializado = true;
+  }
+  iframe.src = url;
+}
+
+function renderHistorialPuntos() {
+  const container = document.getElementById('rastreo-historial');
+  if (!puntosRuta.length) {
+    container.innerHTML = '<div class="history-empty">Sin puntos aún.</div>';
+    return;
+  }
+  // Mostrar últimos 10 puntos
+  const ultimos = [...puntosRuta].reverse().slice(0, 10);
+  container.innerHTML = ultimos.map((p, i) => `
+    <div class="punto-card">
+      <div>
+        <div class="punto-coords">📍 ${p.lat}, ${p.lng}</div>
+        <div class="punto-time">Precisión: ${p.precision}m</div>
+      </div>
+      <div class="punto-time">${new Date(p.hora).toLocaleTimeString('es-DO')}</div>
+    </div>
+  `).join('');
+}
+
+function renderEmpleadosActivos() {
+  if (currentUser.rol !== 'admin') return;
+  const seccion = document.getElementById('empleados-section');
+  const lista = document.getElementById('empleados-list');
+  const users = getUsers();
+  let html = '';
+
+  users.forEach(u => {
+    if (u.id === currentUser.id) return;
+    const key = 'rastreo_sesion_' + u.id;
+    try {
+      const sesion = JSON.parse(localStorage.getItem(key) || 'null');
+      if (!sesion || !sesion.ultimaPos) return;
+      const hace = Math.round((Date.now() - new Date(sesion.ultimaPos.hora).getTime()) / 60000);
+      if (hace > 60) return; // Solo mostrar si fue hace menos de 60 min
+      html += `<div class="punto-card">
+        <div>
+          <div class="punto-coords">👤 ${u.nombre}</div>
+          <div class="punto-time">📍 ${sesion.ultimaPos.lat}, ${sesion.ultimaPos.lng}</div>
+        </div>
+        <div class="punto-time">Hace ${hace} min</div>
+      </div>`;
+    } catch(e) {}
+  });
+
+  if (html) {
+    seccion.style.display = 'block';
+    lista.innerHTML = html;
+  }
+}
+
+/* ============================================================
+   MÓDULO: CONSULTA DE DATOS
+   ============================================================ */
+let consultaResultados = [];
+let vistaConsulta = 'lista';
+
+function initConsulta() {
+  // Poblar select de usuarios
+  const selUser = document.getElementById('consulta-usuario');
+  if (selUser) {
+    selUser.innerHTML = '<option value="">Todos los usuarios</option>';
+    getUsers().forEach(u => {
+      selUser.innerHTML += `<option value="${u.id}">${u.nombre}</option>`;
+    });
+  }
+  filtrarConsulta();
+}
+
+function filtrarConsulta() {
+  const busqueda = (document.getElementById('consulta-search')?.value || '').toLowerCase().trim();
+  const formFilter = document.getElementById('consulta-form')?.value || '';
+  const poliFilter = document.getElementById('consulta-poligono')?.value || '';
+  const userFilter = document.getElementById('consulta-usuario')?.value || '';
+  const fechaIni = document.getElementById('consulta-fecha-ini')?.value || '';
+  const fechaFin = document.getElementById('consulta-fecha-fin')?.value || '';
+
+  let cache = JSON.parse(localStorage.getItem('registros_cache') || '[]');
+
+  // Filtros
+  if (formFilter) cache = cache.filter(r => String(r.formId) === formFilter);
+  if (poliFilter) cache = cache.filter(r => r.poligono === poliFilter);
+  if (userFilter) cache = cache.filter(r => String(r.userId) === userFilter);
+  if (fechaIni)   cache = cache.filter(r => r.fecha && r.fecha.split('T')[0] >= fechaIni);
+  if (fechaFin)   cache = cache.filter(r => r.fecha && r.fecha.split('T')[0] <= fechaFin);
+
+  if (busqueda) {
+    cache = cache.filter(r => {
+      const texto = [r.nombres, r.apellidos, r.nombre, r.cedula, r.rmc, r.sector, r.userName].join(' ').toLowerCase();
+      return texto.includes(busqueda);
+    });
+  }
+
+  consultaResultados = [...cache].reverse();
+  renderConsultaStats();
+  if (vistaConsulta === 'lista') renderConsultaLista();
+  else renderConsultaMapa();
+}
+
+function renderConsultaStats() {
+  const total = consultaResultados.length;
+  const formas = {};
+  consultaResultados.forEach(r => {
+    const nombre = FORM_NAMES[r.formId]?.name || r.formName || 'Otro';
+    formas[nombre] = (formas[nombre] || 0) + 1;
+  });
+
+  let html = `<div class="cstat">Total: ${total}</div>`;
+  Object.entries(formas).forEach(([k, v]) => {
+    html += `<div class="cstat">${k.split(' ').pop()}: ${v}</div>`;
+  });
+  document.getElementById('consulta-stats').innerHTML = html;
+}
+
+function renderConsultaLista() {
+  const lista = document.getElementById('consulta-lista');
+  if (!consultaResultados.length) {
+    lista.innerHTML = '<div class="history-empty">📭 No se encontraron registros.</div>';
+    return;
+  }
+
+  lista.innerHTML = consultaResultados.map((r, idx) => {
+    const f = FORM_NAMES[r.formId] || { icon: '📋', name: r.formName || 'Formulario' };
+    const nombre = r.nombres ? `${r.nombres} ${r.apellidos || ''}`.trim() : (r.nombre || '—');
+    const fecha = r.fecha ? new Date(r.fecha).toLocaleDateString('es-DO') : '—';
+    const identificador = r.cedula ? `Cédula: ${r.cedula}` : (r.rmc ? `RMC: ${r.rmc}` : '');
+
+    return `<div class="consulta-card" onclick="verDetalle(${idx})">
+      <div class="consulta-card-top">
+        <div class="consulta-card-name">${f.icon} ${nombre}</div>
+        <span style="font-size:11px;color:var(--muted)">${fecha}</span>
+      </div>
+      <div class="consulta-card-meta">
+        ${identificador ? `<span>${identificador}</span>` : ''}
+        ${r.sector ? `<span>📍 ${r.sector}</span>` : ''}
+      </div>
+      <div class="consulta-card-badges">
+        <span class="badge badge-form">${f.name}</span>
+        ${r.poligono ? `<span class="badge badge-poli">Polígono ${r.poligono}</span>` : ''}
+        <span class="badge badge-user">👤 ${r.userName || '—'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderConsultaMapa() {
+  const iframe = document.getElementById('consulta-map-iframe');
+  const registrosConGPS = consultaResultados.filter(r => r.lat && r.lng);
+
+  if (!registrosConGPS.length) {
+    iframe.style.display = 'none';
+    document.getElementById('consulta-mapa').innerHTML += '<div class="history-empty">No hay registros con GPS para mostrar en el mapa.</div>';
+    return;
+  }
+
+  // Calcular centro del mapa
+  const lats = registrosConGPS.map(r => parseFloat(r.lat));
+  const lngs = registrosConGPS.map(r => parseFloat(r.lng));
+  const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+  const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+  const spread = 0.01;
+
+  const url = `https://www.openstreetmap.org/export/embed.html?bbox=${centerLng-spread},${centerLat-spread},${centerLng+spread},${centerLat+spread}&layer=mapnik&marker=${centerLat},${centerLng}`;
+  iframe.src = url;
+  iframe.style.display = 'block';
+}
+
+function setConsultaView(tipo, btn) {
+  vistaConsulta = tipo;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  document.getElementById('consulta-lista').style.display = tipo === 'lista' ? 'flex' : 'none';
+  document.getElementById('consulta-mapa').style.display = tipo === 'mapa' ? 'block' : 'none';
+
+  if (tipo === 'mapa') renderConsultaMapa();
+  else renderConsultaLista();
+}
+
+function limpiarFiltros() {
+  document.getElementById('consulta-search').value = '';
+  document.getElementById('consulta-form').value = '';
+  document.getElementById('consulta-poligono').value = '';
+  document.getElementById('consulta-usuario').value = '';
+  document.getElementById('consulta-fecha-ini').value = '';
+  document.getElementById('consulta-fecha-fin').value = '';
+  filtrarConsulta();
+}
+
+function verDetalle(idx) {
+  const r = consultaResultados[idx];
+  if (!r) return;
+
+  const f = FORM_NAMES[r.formId] || { icon: '📋', name: r.formName || 'Formulario' };
+  const nombre = r.nombres ? `${r.nombres} ${r.apellidos || ''}`.trim() : (r.nombre || '—');
+  const fecha = r.fecha ? new Date(r.fecha).toLocaleString('es-DO') : '—';
+
+  // Campos a mostrar por formulario
+  const camposForm1 = [
+    ['Nombres', r.nombres], ['Apellidos', r.apellidos], ['Cédula', r.cedula],
+    ['Teléfono 1', r.tel1], ['Teléfono 2', r.tel2], ['Tipo de Cliente', r.tipo_cliente],
+    ['Categoría', r.categoria], ['Tarifa Mensual', r.tarifa],
+    ['Sector', r.sector], ['Calle', r.calle], ['Casa/Número', r.casa_num],
+    ['Referencia', r.referencia], ['Georeferencia', r.georef],
+    ['GPS', r.lat && r.lng ? `${r.lat}, ${r.lng}` : '—'],
+    ['Publicidad', r.publicidad], ['Tipo Letrero', r.tipo_letrero],
+    ['Cantidad', r.cantidad], ['Medida', r.medida],
+    ['Polígono', r.poligono], ['Fecha Levantamiento', r.fecha],
+    ['Levantado por', r.levantado_por],
+  ];
+
+  const camposForm2 = [
+    ['Nombre', r.nombre], ['RMC', r.rmc], ['Tipo de Cliente', r.tipo_cliente],
+    ['GPS', r.lat && r.lng ? `${r.lat}, ${r.lng}` : '—'],
+    ['Tipo Letrero', r.tipo_letrero], ['Característica', r.caracteristica],
+    ['Cantidad', r.cantidad], ['Medida', r.medida],
+    ['Polígono', r.poligono], ['Observación', r.observacion],
+    ['Fecha', r.fecha], ['Levantado por', r.levantado_por],
+  ];
+
+  const camposForm3 = [
+    ['GPS', r.lat && r.lng ? `${r.lat}, ${r.lng}` : '—'],
+    ['Polígono', r.poligono], ['Observación', r.observacion],
+    ['Fecha', r.fecha], ['Levantado por', r.levantado_por],
+  ];
+
+  const campos = r.formId == 1 ? camposForm1 : r.formId == 2 ? camposForm2 : camposForm3;
+
+  const statusClass = { pending: 's-pending', synced: 's-synced' }[r.status] || 's-pending';
+  const statusLabel = { pending: 'Pendiente', synced: 'Sincronizado' }[r.status] || r.status;
+
+  let html = `
+    <div class="detalle-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div class="detalle-title">${f.icon} ${nombre}</div>
+          <div class="detalle-sub">${f.name} · ${fecha}</div>
+        </div>
+        <span class="status-pill ${statusClass}">${statusLabel}</span>
+      </div>
+    </div>`;
+
+  // Foto si existe
+  if (r.photo_data && r.photo_data.startsWith('data:image')) {
+    html += `<div class="detalle-foto"><img src="${r.photo_data}" alt="Foto del levantamiento"></div>`;
+  }
+
+  html += `<div class="detalle-section">
+    <div class="detalle-section-title">Datos del registro</div>
+    <div class="detalle-grid">
+      ${campos.filter(([k,v]) => v).map(([k,v]) => `
+        <div class="detalle-field ${String(v).length > 30 ? 'full' : ''}">
+          <div class="detalle-field-label">${k}</div>
+          <div class="detalle-field-val">${v}</div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+
+  // Mapa si tiene GPS
+  if (r.lat && r.lng) {
+    const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(r.lng)-0.002},${parseFloat(r.lat)-0.002},${parseFloat(r.lng)+0.002},${parseFloat(r.lat)+0.002}&layer=mapnik&marker=${r.lat},${r.lng}`;
+    html += `<div class="detalle-section">
+      <div class="detalle-section-title">Ubicación GPS</div>
+      <iframe src="${mapUrl}" style="width:100%;height:220px;border:none;border-radius:12px;"></iframe>
+    </div>`;
+  }
+
+  html += `<button class="btn-back-detalle" onclick="goView('consulta')">← Volver a consulta</button>`;
+
+  document.getElementById('detalle-content').innerHTML = html;
+  showView('detalle');
+  document.getElementById('header-title').textContent = 'Detalle del registro';
+}
+
