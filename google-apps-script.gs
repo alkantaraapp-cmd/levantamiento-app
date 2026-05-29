@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * GOOGLE APPS SCRIPT — Backend Sistema de Levantamiento
+ * GOOGLE APPS SCRIPT — Sistema de Levantamiento
  * ============================================================
  * INSTRUCCIONES:
  * 1. Ve a https://script.google.com → Nuevo proyecto
@@ -15,157 +15,227 @@
 
 const SPREADSHEET_ID = 'TU_SPREADSHEET_ID_AQUI';
 
-// Columnas para cada formulario
-const SCHEMAS = {
-  Contribuyentes: [
-    'Fecha','Usuario','Nombres','Apellidos','Cedula','Telefono1','Telefono2',
-    'TipoCliente','Categoria','TarifaMensual',
-    'Georeferencia','Sector','Calle','CasaNumero','Referencia','Latitud','Longitud',
-    'Publicidad','TipoLetrero','Cantidad','Medida',
-    'Foto','Poligono','FechaLevantamiento','LevantadoPor'
-  ],
-  Datos: [
-    'Fecha','Usuario','Nombre','RMC','TipoCliente','Latitud','Longitud',
-    'TipoLetrero','Caracteristica','Cantidad','Medida',
-    'Foto','Poligono','Observacion','FechaLevantamiento','LevantadoPor'
-  ],
-  Construccion: [
-    'Fecha','Usuario','Latitud','Longitud',
-    'Foto','Poligono','Observacion','FechaLevantamiento','LevantadoPor'
-  ],
-};
+// Nombre de la carpeta en Google Drive donde se guardan las fotos
+const DRIVE_FOLDER_NAME = 'Fotos_Levantamiento';
 
-// Mapeo de campos del JSON a columnas
-const FIELD_MAP = {
-  Contribuyentes: {
-    Fecha: d => d.fecha || '',
-    Usuario: d => d.userName || '',
-    Nombres: d => d.nombres || '',
-    Apellidos: d => d.apellidos || '',
-    Cedula: d => d.cedula || '',
-    Telefono1: d => d.tel1 || '',
-    Telefono2: d => d.tel2 || '',
-    TipoCliente: d => d.tipo_cliente || '',
-    Categoria: d => d.categoria || '',
-    TarifaMensual: d => d.tarifa || '',
-    Georeferencia: d => d.georef || '',
-    Sector: d => d.sector || '',
-    Calle: d => d.calle || '',
-    CasaNumero: d => d.casa_num || '',
-    Referencia: d => d.referencia || '',
-    Latitud: d => d.lat || '',
-    Longitud: d => d.lng || '',
-    Publicidad: d => d.publicidad || '',
-    TipoLetrero: d => d.tipo_letrero || '',
-    Cantidad: d => d.cantidad || '',
-    Medida: d => d.medida || '',
-    Foto: d => d.photo_data ? 'Sí (adjunto)' : 'No',
-    Poligono: d => d.poligono || '',
-    FechaLevantamiento: d => d.fecha_lev || '',
-    LevantadoPor: d => d.levantado_por || '',
-  },
-  Datos: {
-    Fecha: d => d.fecha || '',
-    Usuario: d => d.userName || '',
-    Nombre: d => d.nombre || '',
-    RMC: d => d.rmc || '',
-    TipoCliente: d => d.tipo_cliente || '',
-    Latitud: d => d.lat || '',
-    Longitud: d => d.lng || '',
-    TipoLetrero: d => d.tipo_letrero || '',
-    Caracteristica: d => d.caracteristica || '',
-    Cantidad: d => d.cantidad || '',
-    Medida: d => d.medida || '',
-    Foto: d => d.photo_data ? 'Sí (adjunto)' : 'No',
-    Poligono: d => d.poligono || '',
-    Observacion: d => d.observacion || '',
-    FechaLevantamiento: d => d.fecha || '',
-    LevantadoPor: d => d.levantado_por || '',
-  },
-  Construccion: {
-    Fecha: d => d.fecha || '',
-    Usuario: d => d.userName || '',
-    Latitud: d => d.lat || '',
-    Longitud: d => d.lng || '',
-    Foto: d => d.photo_data ? 'Sí (adjunto)' : 'No',
-    Poligono: d => d.poligono || '',
-    Observacion: d => d.observacion || '',
-    FechaLevantamiento: d => d.fecha || '',
-    LevantadoPor: d => d.levantado_por || '',
-  },
-};
-
+// ============================================================
+// Recibe datos POST desde la app
+// ============================================================
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
-    const sheetName = data.sheet || 'General';
-    const schema = SCHEMAS[sheetName];
-    const fieldMap = FIELD_MAP[sheetName];
 
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    let ws = ss.getSheetByName(sheetName);
-
-    if (!ws) {
-      ws = ss.insertSheet(sheetName);
-      if (schema) {
-        ws.appendRow(schema);
-        const headerRange = ws.getRange(1, 1, 1, schema.length);
-        headerRange.setBackground('#1a3c5e').setFontColor('#ffffff').setFontWeight('bold');
-        ws.setFrozenRows(1);
-      }
-    }
-
-    let row;
-    if (schema && fieldMap) {
-      row = schema.map(col => fieldMap[col] ? fieldMap[col](data) : '');
-    } else {
-      // Formulario personalizado: columnas dinámicas
-      const keys = Object.keys(data).filter(k => !['formId','formName','sheet','status','localId','photo_data'].includes(k));
-      if (ws.getLastRow() === 0) {
-        ws.appendRow(keys);
-        ws.getRange(1, 1, 1, keys.length).setBackground('#1a3c5e').setFontColor('#ffffff').setFontWeight('bold');
-      }
-      row = keys.map(k => data[k] || '');
-    }
-
-    ws.appendRow(row);
-
-    // Guardar foto en Drive si existe
+    // 1. Subir foto a Drive y obtener enlace público
+    let fotoUrl = '';
     if (data.photo_data && data.photo_data.startsWith('data:image')) {
-      try {
-        const base64 = data.photo_data.split(',')[1];
-        const blob = Utilities.newBlob(Utilities.base64Decode(base64), 'image/jpeg', `foto_${Date.now()}.jpg`);
-        const folder = getOrCreateFolder(sheetName);
-        const file = folder.createFile(blob);
-        // Actualizar la última fila con la URL de la foto
-        const lastRow = ws.getLastRow();
-        const fotoCol = schema ? schema.indexOf('Foto') + 1 : 0;
-        if (fotoCol > 0) ws.getRange(lastRow, fotoCol).setValue(file.getUrl());
-      } catch(photoErr) {
-        Logger.log('Error guardando foto: ' + photoErr);
-      }
+      fotoUrl = subirFotoADrive(data.photo_data, data.sheet, data.localId);
     }
+
+    // 2. Guardar datos en la hoja correcta
+    const sheetName = data.sheet || 'General';
+    guardarEnSheet(sheetName, data, fotoUrl);
 
     return ContentService
-      .createTextOutput(JSON.stringify({ success: true }))
+      .createTextOutput(JSON.stringify({ success: true, fotoUrl: fotoUrl }))
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch(err) {
-    Logger.log('Error: ' + err);
+    Logger.log('Error: ' + err.toString());
     return ContentService
       .createTextOutput(JSON.stringify({ success: false, error: err.message }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-function doGet() {
-  return ContentService
-    .createTextOutput(JSON.stringify({ status: 'ok', app: 'Sistema de Levantamiento' }))
-    .setMimeType(ContentService.MimeType.JSON);
+// ============================================================
+// Sube la foto a Google Drive y retorna el enlace
+// ============================================================
+function subirFotoADrive(photoData, sheetName, localId) {
+  try {
+    // Obtener o crear carpeta principal
+    const carpetaPrincipal = obtenerOCrearCarpeta(DRIVE_FOLDER_NAME);
+
+    // Subcarpeta por tipo de formulario
+    const subcarpeta = obtenerOCrearCarpetaDentro(sheetName || 'General', carpetaPrincipal);
+
+    // Decodificar base64
+    const base64 = photoData.split(',')[1];
+    const mimeType = photoData.split(';')[0].split(':')[1] || 'image/jpeg';
+    const extension = mimeType.includes('png') ? 'png' : 'jpg';
+    const nombreArchivo = `foto_${sheetName}_${localId || Date.now()}.${extension}`;
+
+    // Crear archivo en Drive
+    const blob = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, nombreArchivo);
+    const archivo = subcarpeta.createFile(blob);
+
+    // Hacer el archivo accesible con enlace
+    archivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    // Retornar enlace directo de visualización
+    return 'https://drive.google.com/file/d/' + archivo.getId() + '/view';
+
+  } catch(err) {
+    Logger.log('Error subiendo foto: ' + err.toString());
+    return 'Error al subir foto';
+  }
 }
 
-function getOrCreateFolder(name) {
-  const folderName = 'Fotos_Levantamiento_' + name;
-  const folders = DriveApp.getFoldersByName(folderName);
-  return folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+// ============================================================
+// Guarda los datos en la hoja de Google Sheets
+// ============================================================
+function guardarEnSheet(sheetName, data, fotoUrl) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let ws = ss.getSheetByName(sheetName);
+
+  // Definir columnas según el tipo de formulario
+  const schemas = {
+    'Contribuyentes': [
+      'Fecha Registro','Usuario','Nombres','Apellidos','Cedula',
+      'Telefono 1','Telefono 2','Tipo de Cliente','Categoria','Tarifa Mensual',
+      'Georeferencia','Sector','Calle','Casa Numero','Referencia',
+      'Latitud','Longitud','Publicidad','Tipo Letrero','Cantidad','Medida (ft²)',
+      'Foto','Poligono','Fecha Levantamiento','Levantado Por'
+    ],
+    'Datos': [
+      'Fecha Registro','Usuario','Nombre','RMC','Tipo de Cliente',
+      'Latitud','Longitud','Tipo Letrero','Caracteristica','Cantidad','Medida (ft²)',
+      'Foto','Poligono','Observacion','Fecha Levantamiento','Levantado Por'
+    ],
+    'Construccion': [
+      'Fecha Registro','Usuario',
+      'Latitud','Longitud',
+      'Foto','Poligono','Observacion','Fecha Levantamiento','Levantado Por'
+    ]
+  };
+
+  const schema = schemas[sheetName];
+
+  // Crear hoja si no existe
+  if (!ws) {
+    ws = ss.insertSheet(sheetName);
+    const headers = schema || ['Fecha','Usuario','Datos','Foto'];
+    ws.appendRow(headers);
+    // Estilo del encabezado
+    const headerRange = ws.getRange(1, 1, 1, headers.length);
+    headerRange.setBackground('#1a3c5e').setFontColor('#ffffff').setFontWeight('bold').setFontSize(11);
+    ws.setFrozenRows(1);
+    ws.setColumnWidth(headers.indexOf('Foto') + 1, 300); // Columna foto más ancha
+  }
+
+  // Construir fila según el formulario
+  let fila;
+
+  if (sheetName === 'Contribuyentes') {
+    fila = [
+      formatearFecha(data.fecha),
+      data.userName || '',
+      data.nombres || '',
+      data.apellidos || '',
+      data.cedula || '',
+      data.tel1 || '',
+      data.tel2 || '',
+      data.tipo_cliente || '',
+      data.categoria || '',
+      data.tarifa || '',
+      data.georef || '',
+      data.sector || '',
+      data.calle || '',
+      data.casa_num || '',
+      data.referencia || '',
+      data.lat || '',
+      data.lng || '',
+      data.publicidad || '',
+      data.tipo_letrero || '',
+      data.cantidad || '',
+      data.medida || '',
+      fotoUrl,
+      data.poligono || '',
+      data.fecha_lev || data.f1_fecha || '',
+      data.levantado_por || ''
+    ];
+  } else if (sheetName === 'Datos') {
+    fila = [
+      formatearFecha(data.fecha),
+      data.userName || '',
+      data.nombre || '',
+      data.rmc || '',
+      data.tipo_cliente || '',
+      data.lat || '',
+      data.lng || '',
+      data.tipo_letrero || '',
+      data.caracteristica || '',
+      data.cantidad || '',
+      data.medida || '',
+      fotoUrl,
+      data.poligono || '',
+      data.observacion || '',
+      data.fecha || '',
+      data.levantado_por || ''
+    ];
+  } else if (sheetName === 'Construccion') {
+    fila = [
+      formatearFecha(data.fecha),
+      data.userName || '',
+      data.lat || '',
+      data.lng || '',
+      fotoUrl,
+      data.poligono || '',
+      data.observacion || '',
+      data.fecha || '',
+      data.levantado_por || ''
+    ];
+  } else {
+    // Formulario personalizado — columnas dinámicas
+    const keys = Object.keys(data).filter(k =>
+      !['formId','formName','sheet','status','localId','photo_data','userId'].includes(k)
+    );
+    if (ws.getLastRow() === 0) {
+      ws.appendRow([...keys, 'Foto']);
+      ws.getRange(1, 1, 1, keys.length + 1).setBackground('#1a3c5e').setFontColor('#ffffff').setFontWeight('bold');
+      ws.setFrozenRows(1);
+    }
+    fila = [...keys.map(k => data[k] || ''), fotoUrl];
+  }
+
+  ws.appendRow(fila);
+
+  // Si hay enlace de foto, hacerlo clickeable con fórmula HYPERLINK
+  if (fotoUrl && fotoUrl.startsWith('https://')) {
+    const lastRow = ws.getLastRow();
+    const fotoCol = (sheetName === 'Contribuyentes') ? 22
+                  : (sheetName === 'Datos') ? 12
+                  : (sheetName === 'Construccion') ? 5
+                  : fila.length;
+    if (fotoCol > 0) {
+      ws.getRange(lastRow, fotoCol).setFormula(`=HYPERLINK("${fotoUrl}","Ver foto")`);
+    }
+  }
+}
+
+// ============================================================
+// Helpers
+// ============================================================
+function obtenerOCrearCarpeta(nombre) {
+  const folders = DriveApp.getFoldersByName(nombre);
+  return folders.hasNext() ? folders.next() : DriveApp.createFolder(nombre);
+}
+
+function obtenerOCrearCarpetaDentro(nombre, parent) {
+  const folders = parent.getFoldersByName(nombre);
+  return folders.hasNext() ? folders.next() : parent.createFolder(nombre);
+}
+
+function formatearFecha(isoString) {
+  if (!isoString) return '';
+  try {
+    const d = new Date(isoString);
+    return Utilities.formatDate(d, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+  } catch(e) { return isoString; }
+}
+
+// Test de conectividad
+function doGet() {
+  return ContentService
+    .createTextOutput(JSON.stringify({ status: 'ok', app: 'Sistema de Levantamiento v2' }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
