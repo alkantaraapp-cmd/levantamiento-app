@@ -2,9 +2,10 @@
    CONFIGURACIÓN - Pega tu URL de Apps Script aquí
    ============================================================ */
 const CFG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzQEYT7ylnDfyKBPLj2R9YdDgLawovFZb0LZNvHtcntbH5H9O-LcKgfjCyXBgtOwytdVQ/exec',
+  SCRIPT_URL: 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec',
   APP_NAME: 'Sistema de Levantamiento'
 };
+
 const DEFAULT_USERS = [
   { id: 1, nombre: 'Administrador', usuario: 'admin', pass: 'admin123', rol: 'admin', forms: [1,2,3] },
   { id: 2, nombre: 'Supervisor',    usuario: 'super', pass: 'super123', rol: 'supervisor', forms: [1,2,3] },
@@ -754,7 +755,33 @@ function init() {
   }
   document.getElementById('login-pass')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
   document.getElementById('login-user')?.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pass').focus(); });
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Registrar Service Worker con detección de actualizaciones
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(function(reg) {
+
+      // Detectar nueva versión disponible
+      reg.addEventListener('updatefound', function() {
+        var nuevo = reg.installing;
+        nuevo.addEventListener('statechange', function() {
+          if (nuevo.state === 'installed' && navigator.serviceWorker.controller) {
+            // Hay versión nueva — actualizar automáticamente
+            nuevo.postMessage('SKIP_WAITING');
+            showToast('🔄 App actualizada. Recargando...');
+            setTimeout(function() { window.location.reload(); }, 1500);
+          }
+        });
+      });
+
+      // Verificar actualización cada vez que abre la app
+      reg.update();
+
+    }).catch(function() {});
+
+    // Si el SW toma control, recargar para usar versión nueva
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+      window.location.reload();
+    });
+  }
 }
 
 init();

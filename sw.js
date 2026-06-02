@@ -1,29 +1,87 @@
-const CACHE = 'levantamiento-v1';
-const ASSETS = ['./', './index.html', './style.css', './app.js', './manifest.json'];
+/* ============================================================
+   SERVICE WORKER v3 — Siempre usa archivos frescos
+   ============================================================ */
 
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
-  self.skipWaiting();
-});
+// Cambiar este número cada vez que actualices la app
+const VERSION = 'levantamiento-v3';
 
-self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-  ));
-  self.clients.claim();
-});
+const ARCHIVOS = [
+  './',
+  './index.html',
+  './style.css',
+  './app.js',
+  './manifest.json'
+];
 
-self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      const network = fetch(e.request).then(res => {
-        if (res.ok && e.request.url.startsWith(self.location.origin)) {
-          caches.open(CACHE).then(c => c.put(e.request, res.clone()));
-        }
-        return res;
-      }).catch(() => cached);
-      return cached || network;
+// INSTALAR — cachear archivos frescos
+self.addEventListener('install', function(e) {
+  e.waitUntil(
+    caches.open(VERSION).then(function(cache) {
+      return cache.addAll(ARCHIVOS);
+    }).then(function() {
+      // Activar inmediatamente sin esperar
+      return self.skipWaiting();
     })
   );
+});
+
+// ACTIVAR — borrar cachés viejos
+self.addEventListener('activate', function(e) {
+  e.waitUntil(
+    caches.keys().then(function(keys) {
+      return Promise.all(
+        keys.filter(function(key) {
+          return key !== VERSION; // borrar todo excepto el actual
+        }).map(function(key) {
+          console.log('SW: borrando caché viejo:', key);
+          return caches.delete(key);
+        })
+      );
+    }).then(function() {
+      // Tomar control de todas las pestañas abiertas inmediatamente
+      return self.clients.claim();
+    })
+  );
+});
+
+// FETCH — Network First para archivos de la app, Cache First para externos
+self.addEventListener('fetch', function(e) {
+  // Solo manejar GET
+  if (e.request.method !== 'GET') return;
+
+  var url = e.request.url;
+
+  // Para archivos de la app: intentar red primero, caché como respaldo
+  if (url.includes(self.location.origin)) {
+    e.respondWith(
+      fetch(e.request).then(function(response) {
+        // Si la respuesta es válida, actualizarla en caché
+        if (response && response.status === 200) {
+          var clone = response.clone();
+          caches.open(VERSION).then(function(cache) {
+            cache.put(e.request, clone);
+          });
+        }
+        return response;
+      }).catch(function() {
+        // Sin red — usar caché
+        return caches.match(e.request);
+      })
+    );
+  }
+  // Para recursos externos (fuentes, mapas) usar caché si está disponible
+  else {
+    e.respondWith(
+      caches.match(e.request).then(function(cached) {
+        return cached || fetch(e.request);
+      })
+    );
+  }
+});
+
+// MENSAJE — permite forzar actualización desde la app
+self.addEventListener('message', function(e) {
+  if (e.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
