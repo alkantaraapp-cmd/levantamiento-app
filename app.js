@@ -2,7 +2,7 @@
    CONFIGURACIÓN - Pega tu URL de Apps Script aquí
    ============================================================ */
 const CFG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzxinNHYXojzJUmoKqBoHdHz6URof37NPpWGBcrIUlgSwd2v-5DyleSWrTaXQtoU4S6fw/exec',
+  SCRIPT_URL: 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec',
   APP_NAME: 'Sistema de Levantamiento'
 };
 
@@ -338,14 +338,38 @@ function submitForm(formId) {
   });
 
   // Guardar en localStorage — INSTANTÁNEO
+  // Separar la foto del resto para no llenar el almacenamiento del teléfono
   try {
-    const cache = JSON.parse(localStorage.getItem('registros_cache') || '[]');
-    cache.push(data);
+    var photoData = data.photo_data || '';
+    var dataParaLocal = {};
+    for (var k in data) {
+      if (k !== 'photo_data') dataParaLocal[k] = data[k];
+    }
+    dataParaLocal.tiene_foto = photoData ? 'Si' : 'No';
+
+    var cache = JSON.parse(localStorage.getItem('registros_cache') || '[]');
+    cache.push(dataParaLocal);
     localStorage.setItem('registros_cache', JSON.stringify(cache));
+
+    // La foto solo va al servidor — no se guarda local
+    data.photo_data = photoData;
   } catch(e) {
-    showToast('❌ Error al guardar. Intenta de nuevo.');
-    if (btn) { btn.classList.remove('processing'); btn.textContent = '💾 Guardar registro'; btn.style.opacity = '1'; }
-    return;
+    // Si falla por espacio, guardar sin foto
+    try {
+      var dataMinima = {};
+      for (var k in data) {
+        if (k !== 'photo_data') dataMinima[k] = data[k];
+      }
+      dataMinima.tiene_foto = 'No (error espacio)';
+      var cache = JSON.parse(localStorage.getItem('registros_cache') || '[]');
+      cache.push(dataMinima);
+      localStorage.setItem('registros_cache', JSON.stringify(cache));
+      data.photo_data = '';
+    } catch(e2) {
+      showToast('❌ Sin espacio en el teléfono. Libera memoria e intenta de nuevo.');
+      if (btn) { btn.classList.remove('processing'); btn.textContent = '💾 Guardar registro'; btn.style.opacity = '1'; }
+      return;
+    }
   }
 
   // Rehabilitar botón y mostrar éxito INMEDIATAMENTE
