@@ -2,8 +2,57 @@
    CONFIGURACIÓN
    ============================================================ */
 const CFG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzxinNHYXojzJUmoKqBoHdHz6URof37NPpWGBcrIUlgSwd2v-5DyleSWrTaXQtoU4S6fw/exec'
+  SCRIPT_URL: 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec'
 };
+
+/* ============================================================
+   INDEXEDDB — almacenamiento de fotos offline
+   ============================================================ */
+let fotoDB = null;
+
+function abrirFotoDB() {
+  return new Promise(function(resolve) {
+    if (fotoDB) { resolve(fotoDB); return; }
+    const req = indexedDB.open('FotosDB', 1);
+    req.onupgradeneeded = function(e) {
+      e.target.result.createObjectStore('fotos', { keyPath: 'localId' });
+    };
+    req.onsuccess = function(e) { fotoDB = e.target.result; resolve(fotoDB); };
+    req.onerror = function() { resolve(null); };
+  });
+}
+
+function guardarFotoLocal(localId, photoData) {
+  return abrirFotoDB().then(function(db) {
+    if (!db || !photoData) return;
+    return new Promise(function(resolve) {
+      const tx = db.transaction('fotos', 'readwrite');
+      tx.objectStore('fotos').put({ localId: localId, photo_data: photoData });
+      tx.oncomplete = resolve;
+      tx.onerror = resolve;
+    });
+  });
+}
+
+function obtenerFotoLocal(localId) {
+  return abrirFotoDB().then(function(db) {
+    if (!db) return null;
+    return new Promise(function(resolve) {
+      const tx = db.transaction('fotos', 'readonly');
+      const req = tx.objectStore('fotos').get(localId);
+      req.onsuccess = function() { resolve(req.result ? req.result.photo_data : null); };
+      req.onerror = function() { resolve(null); };
+    });
+  });
+}
+
+function borrarFotoLocal(localId) {
+  return abrirFotoDB().then(function(db) {
+    if (!db) return;
+    const tx = db.transaction('fotos', 'readwrite');
+    tx.objectStore('fotos').delete(localId);
+  });
+}
 
 const DEFAULT_USERS = [
   { id:1, nombre:'Administrador', usuario:'admin', pass:'admin123', rol:'admin',      forms:[1,2,3] },
@@ -195,15 +244,17 @@ function getGPS(prefix) {
   if (!navigator.geolocation) { el.textContent='GPS no disponible'; return; }
   navigator.geolocation.getCurrentPosition(
     function(pos) {
-      // Usar número y luego convertir a string con punto siempre
-      var latNum = pos.coords.latitude;
-      var lngNum = pos.coords.longitude;
-      // toFixed siempre usa punto en JS independiente del idioma del teléfono
-      var lat = latNum.toFixed(6);
-      var lng = lngNum.toFixed(6);
+      var lat = pos.coords.latitude.toFixed(6);
+      var lng = pos.coords.longitude.toFixed(6);
       document.getElementById(prefix+'_lat').value = lat;
       document.getElementById(prefix+'_lng').value = lng;
-      el.textContent = '✅ '+lat+' , '+lng;
+      // Guardar enlace de Google Maps en campo oculto
+      var mapsUrl = 'https://maps.google.com/?q=' + lat + ',' + lng;
+      var mapsEl = document.getElementById(prefix+'_maps_url');
+      if (mapsEl) mapsEl.value = mapsUrl;
+      // Mostrar coordenadas + enlace clickeable
+      el.innerHTML = '✅ ' + lat + ', ' + lng +
+        ' <a href="' + mapsUrl + '" target="_blank" style="color:#0077b6;font-weight:700;text-decoration:underline;">Ver en Maps</a>';
     },
     function() { el.textContent='❌ No se pudo obtener la ubicación'; },
     { enableHighAccuracy:true, timeout:15000 }
@@ -305,8 +356,9 @@ function submitForm(formId) {
     data[el.id.replace(prefix,'')] = el.value || '';
   });
 
-  // Guardar local SIN foto (la foto va directo al servidor)
   const photoData = data.photo_data || '';
+
+  // Guardar datos en localStorage SIN foto
   try {
     const localData = Object.assign({}, data);
     delete localData.photo_data;
@@ -314,9 +366,11 @@ function submitForm(formId) {
     const cache = JSON.parse(localStorage.getItem('registros_cache')||'[]');
     cache.push(localData);
     localStorage.setItem('registros_cache', JSON.stringify(cache));
-  } catch(e) {
-    // Si falla localStorage seguir igual — los datos se envían al servidor
-    console.warn('localStorage lleno:', e);
+  } catch(e) { console.warn('localStorage:', e); }
+
+  // Guardar foto en IndexedDB (mucho más capacidad que localStorage)
+  if (photoData) {
+    guardarFotoLocal(data.localId, photoData);
   }
 
   // Liberar botón y mostrar éxito INMEDIATAMENTE
@@ -325,14 +379,17 @@ function submitForm(formId) {
   updatePending();
   showOkModal('✅ Registro guardado', isOnline
     ? 'Guardado. Enviando a Google Sheets en segundo plano...'
-    : 'Sin internet. Se enviará al conectarse.');
+    : 'Sin internet. La foto y los datos se enviarán al conectarse.');
 
-  // Enviar al servidor en segundo plano con foto incluida
+  // Enviar al servidor en segundo plano
   if (isOnline) {
-    data.photo_data = photoData; // restaurar foto para envío
+    data.photo_data = photoData;
     window.setTimeout(function() {
       sendToSheets(data)
-        .then(function() { updateCacheStatus(data.localId,'synced'); })
+        .then(function() {
+          updateCacheStatus(data.localId, 'synced');
+          borrarFotoLocal(data.localId); // liberar espacio
+        })
         .catch(function() {});
     }, 800);
   }
@@ -384,13 +441,24 @@ async function sendToSheets(data) {
 
 async function syncAll() {
   if (!isOnline) { showToast('Sin conexión'); return; }
-  const cache = JSON.parse(localStorage.getItem('registros_cache')||'[]');
-  const pending = cache.filter(r=>r.status==='pending');
+  let cache = [];
+  try { cache = JSON.parse(localStorage.getItem('registros_cache')||'[]'); } catch(e) {}
+  const pending = cache.filter(r => r.status === 'pending');
   if (!pending.length) { showToast('✅ Todo sincronizado'); return; }
   showToast('⏳ Sincronizando '+pending.length+' registro(s)...');
-  let ok=0;
+  let ok = 0;
   for (const r of pending) {
-    try { await sendToSheets(r); updateCacheStatus(r.localId,'synced'); ok++; } catch(e) {}
+    try {
+      // Recuperar foto guardada offline en IndexedDB
+      const photoData = await obtenerFotoLocal(r.localId);
+      const dataConFoto = Object.assign({}, r);
+      if (photoData) dataConFoto.photo_data = photoData;
+
+      await sendToSheets(dataConFoto);
+      updateCacheStatus(r.localId, 'synced');
+      if (photoData) borrarFotoLocal(r.localId); // liberar espacio
+      ok++;
+    } catch(e) {}
   }
   showToast('✅ '+ok+' de '+pending.length+' sincronizados');
   updatePending();
