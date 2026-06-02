@@ -2,7 +2,7 @@
    CONFIGURACIÓN - Pega tu URL de Apps Script aquí
    ============================================================ */
 const CFG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyFLxR8UC6S_m_0DvG0YyroENxRG2AGfT2EjJ6-J_vUpW-zyarnOuxynCbrqo8S66oWjQ/exec',
+  SCRIPT_URL: 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec',
   APP_NAME: 'Sistema de Levantamiento'
 };
 
@@ -214,14 +214,18 @@ function getGPS(prefix) {
   el.textContent = '📡 Obteniendo ubicación...';
   if (!navigator.geolocation) { el.textContent = 'GPS no disponible'; return; }
   navigator.geolocation.getCurrentPosition(
-    pos => {
-      const lat = pos.coords.latitude.toFixed(6);
-      const lng = pos.coords.longitude.toFixed(6);
+    function(pos) {
+      // toFixed(6) en JS siempre usa punto — independiente del idioma del teléfono
+      var lat = pos.coords.latitude.toFixed(6);
+      var lng = pos.coords.longitude.toFixed(6);
+      // Forzar punto decimal por si el teléfono lo convierte a coma
+      lat = lat.replace(',', '.');
+      lng = lng.replace(',', '.');
       document.getElementById(prefix + '_lat').value = lat;
       document.getElementById(prefix + '_lng').value = lng;
-      el.textContent = `✅ Lat: ${lat}, Lng: ${lng}`;
+      el.textContent = '✅ Lat: ' + lat + ' | Lng: ' + lng;
     },
-    () => { el.textContent = '❌ No se pudo obtener la ubicación'; },
+    function() { el.textContent = '❌ No se pudo obtener la ubicación'; },
     { enableHighAccuracy: true, timeout: 10000 }
   );
 }
