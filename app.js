@@ -2,7 +2,7 @@
    CONFIGURACIÓN
    ============================================================ */
 const CFG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec'
+  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzBV2L2nMbIJsfAfK0q8qcvnbHHEOfW_7i0GjbYtY2RIUDQU8LxV3K1lUKYG4Y0V2YxFQ/exec'
 };
 
 /* ============================================================
