@@ -2,7 +2,7 @@
    CONFIGURACIÓN
    ============================================================ */
 const CFG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzxinNHYXojzJUmoKqBoHdHz6URof37NPpWGBcrIUlgSwd2v-5DyleSWrTaXQtoU4S6fw/exec'
+  SCRIPT_URL: 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec'
 };
 
 /* ============================================================
@@ -764,6 +764,79 @@ function setConsultaView(tipo,btn) {
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
   document.getElementById('consulta-lista').style.display=tipo==='lista'?'flex':'none';
   document.getElementById('consulta-mapa').style.display=tipo==='mapa'?'block':'none';
+  if (tipo==='mapa') renderConsultaMapa();
+}
+
+function renderConsultaMapa() {
+  const contenedor = document.getElementById('consulta-mapa');
+  const registros = consultaResultados.filter(function(r) { return r.lat && r.lng; });
+
+  if (!registros.length) {
+    contenedor.innerHTML = '<div class="history-empty">📭 No hay registros con GPS para mostrar.</div>';
+    return;
+  }
+
+  // Crear div del mapa
+  contenedor.innerHTML = '<div id="leaflet-map" style="width:100%;height:420px;border-radius:12px;margin:0 16px 16px;width:calc(100% - 32px);"></div>';
+
+  function iniciarMapa() {
+    const L = window.L;
+    if (!L) { showToast('Error cargando el mapa'); return; }
+
+    // Destruir mapa previo si existe
+    const el = document.getElementById('leaflet-map');
+    if (!el) return;
+    if (el._leaflet_id) { el._leaflet_id = null; }
+
+    const lats = registros.map(function(r) { return parseFloat(r.lat); });
+    const lngs = registros.map(function(r) { return parseFloat(r.lng); });
+    const centerLat = (Math.min.apply(null,lats) + Math.max.apply(null,lats)) / 2;
+    const centerLng = (Math.min.apply(null,lngs) + Math.max.apply(null,lngs)) / 2;
+
+    const map = L.map('leaflet-map').setView([centerLat, centerLng], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap', maxZoom: 19
+    }).addTo(map);
+
+    // Marcador por cada registro
+    registros.forEach(function(r) {
+      const lat = parseFloat(r.lat);
+      const lng = parseFloat(r.lng);
+      const nombre = r.nombres ? (r.nombres+' '+(r.apellidos||'')).trim() : (r.nombre||'Sin nombre');
+      const form = FORMS[r.formId] ? FORMS[r.formId].name : (r.formName||'Formulario');
+      const fecha = r.fecha ? new Date(r.fecha).toLocaleDateString('es-DO') : '—';
+      const mapsUrl = 'https://maps.google.com/?q='+lat+','+lng;
+      const popup =
+        '<b>'+nombre+'</b><br>'+
+        '<i>'+form+'</i><br>'+
+        'Polígono: '+(r.poligono||'—')+'<br>'+
+        'Fecha: '+fecha+'<br>'+
+        '<a href="'+mapsUrl+'" target="_blank" style="color:#0077b6;font-weight:600;">📍 Ver en Google Maps</a>';
+      L.marker([lat, lng]).addTo(map).bindPopup(popup);
+    });
+
+    // Ajustar zoom para ver todos los puntos
+    if (registros.length > 1) {
+      const bounds = L.latLngBounds(registros.map(function(r) { return [parseFloat(r.lat), parseFloat(r.lng)]; }));
+      map.fitBounds(bounds, { padding: [40, 40] });
+    }
+  }
+
+  // Cargar Leaflet si no está disponible
+  if (!window.L) {
+    if (!document.getElementById('leaflet-css')) {
+      const css = document.createElement('link');
+      css.id = 'leaflet-css'; css.rel = 'stylesheet';
+      css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+      document.head.appendChild(css);
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+    script.onload = iniciarMapa;
+    document.head.appendChild(script);
+  } else {
+    iniciarMapa();
+  }
 }
 function limpiarFiltros() {
   ['consulta-search','consulta-fecha-ini','consulta-fecha-fin'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
