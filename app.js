@@ -888,32 +888,6 @@ function showOkModal(title,msg) {
 function closeOkModal() { document.getElementById('modal-ok').style.display='none'; showView('home'); }
 
 /* ============================================================
-   INIT
-   ============================================================ */
-function init() {
-  updateOnlineStatus();
-  if (restoreSession()) { startApp(); }
-  else { document.getElementById('screen-login').style.display='flex'; document.getElementById('screen-app').style.display='none'; }
-  document.getElementById('login-pass')?.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
-  document.getElementById('login-user')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('login-pass').focus();});
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').then(function(reg) {
-      reg.addEventListener('updatefound',function() {
-        const nuevo=reg.installing;
-        nuevo.addEventListener('statechange',function() {
-          if (nuevo.state==='installed'&&navigator.serviceWorker.controller) {
-            nuevo.postMessage('SKIP_WAITING');
-            showToast('🔄 Actualizando app...');
-            setTimeout(()=>window.location.reload(),1500);
-          }
-        });
-      });
-      reg.update();
-    }).catch(()=>{});
-    navigator.serviceWorker.addEventListener('controllerchange',()=>window.location.reload());
-  }
-}
-/* ============================================================
    PEGAR ESTE BLOQUE COMPLETO AL FINAL DE app.js
    (justo antes de la línea:  init(); )
    ============================================================ */
@@ -1018,4 +992,30 @@ resetForm = function(formId) {
       { id:2, ..., forms:[1,2,3,4,5] },
 
    ============================================================ */
+/* ============================================================
+   INIT
+   ============================================================ */
+function init() {
+  updateOnlineStatus();
+  if (restoreSession()) { startApp(); }
+  else { document.getElementById('screen-login').style.display='flex'; document.getElementById('screen-app').style.display='none'; }
+  document.getElementById('login-pass')?.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  document.getElementById('login-user')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('login-pass').focus();});
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(function(reg) {
+      reg.addEventListener('updatefound',function() {
+        const nuevo=reg.installing;
+        nuevo.addEventListener('statechange',function() {
+          if (nuevo.state==='installed'&&navigator.serviceWorker.controller) {
+            nuevo.postMessage('SKIP_WAITING');
+            showToast('🔄 Actualizando app...');
+            setTimeout(()=>window.location.reload(),1500);
+          }
+        });
+      });
+      reg.update();
+    }).catch(()=>{});
+    navigator.serviceWorker.addEventListener('controllerchange',()=>window.location.reload());
+  }
+}
 init();
