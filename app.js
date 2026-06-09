@@ -913,4 +913,109 @@ function init() {
     navigator.serviceWorker.addEventListener('controllerchange',()=>window.location.reload());
   }
 }
+/* ============================================================
+   PEGAR ESTE BLOQUE COMPLETO AL FINAL DE app.js
+   (justo antes de la línea:  init(); )
+   ============================================================ */
+
+/* ── Contador numérico con +/- ── */
+function incrementar(id, delta) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const val = Math.max(0, (parseInt(el.value) || 0) + delta);
+  el.value = val;
+}
+
+/* ── Georeferencia automática del Form 4 ── */
+function actualizarGeoreferencia4() {
+  const cem    = document.getElementById('f4_cementerio')?.value  || '';
+  const sector = document.getElementById('f4_sector')?.value      || '';
+  const manz   = document.getElementById('f4_manzana')?.value     || '';
+  const lote   = document.getElementById('f4_num_lote')?.value    || '';
+  const ref    = document.getElementById('f4_georeferencia');
+  if (ref) ref.value = [cem, sector, manz, lote].filter(Boolean).join('-');
+}
+
+/* ── Número de Nicho automático del Form 5 ── */
+function actualizarNumeroNicho5() {
+  const geo      = document.getElementById('f5_georeferencia_base')?.value || '';
+  const terminal = document.getElementById('f5_terminal_nicho')?.value     || '';
+  const posicion = document.getElementById('f5_posicion')?.value           || '';
+  const ref      = document.getElementById('f5_numero_nicho');
+  if (ref) ref.value = [geo, terminal, posicion].filter(Boolean).join('-');
+}
+
+/* ── Parche: resetForm para forms 4 y 5 ──
+   El resetForm() original ya limpia todos los inputs del view,
+   pero los campos readonly y los radio-buttons visuales (toggle-btn)
+   necesitan un reseteo extra. */
+const _resetFormOriginal = resetForm;
+resetForm = function(formId) {
+  _resetFormOriginal(formId);
+
+  if (formId === 4) {
+    // Limpiar georeferencia calculada
+    const gr = document.getElementById('f4_georeferencia');
+    if (gr) gr.value = '';
+
+    // Limpiar todos los toggle-btn del form 4
+    document.querySelectorAll('#view-form4 .toggle-btn').forEach(b => b.classList.remove('active'));
+
+    // Resetear contadores
+    ['f4_cant_nichos','f4_cant_niveles'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '0';
+    });
+
+    // Limpiar GPS
+    const gps = document.getElementById('f4_gps_coords');
+    if (gps) gps.textContent = 'Sin ubicación capturada';
+
+    // Resetear campos ocultos GPS
+    ['f4_lat','f4_lng','f4_maps_url'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+  }
+
+  if (formId === 5) {
+    // Limpiar número de nicho calculado
+    const nn = document.getElementById('f5_numero_nicho');
+    if (nn) nn.value = '';
+
+    // Limpiar todos los toggle-btn del form 5
+    document.querySelectorAll('#view-form5 .toggle-btn').forEach(b => b.classList.remove('active'));
+  }
+};
+/* ============================================================
+   CAMBIOS TAMBIÉN NECESARIOS EN app.js (editar manualmente)
+   ============================================================
+
+   1. En const FORMS = { ... }, AÑADIR antes del cierre }:
+      4: { name:'Cementerios y Bóvedas', icon:'🏛️', sheet:'Cementerios_Bovedas' },
+      5: { name:'Personas Fallecidas',   icon:'⚰️', sheet:'Difuntos' },
+
+   2. En const REQUIRED = { ... }, AÑADIR antes del cierre }:
+      4: ['f4_cementerio','f4_sector','f4_manzana','f4_num_lote',
+          'f4_nombre_cementerio','f4_status_lote','f4_nombre_boveda',
+          'f4_materiales','f4_condiciones','f4_fecha','f4_levantado_por'],
+      5: ['f5_georeferencia_base','f5_estado_nicho','f5_terminal_nicho',
+          'f5_posicion','f5_fecha','f5_levantado_por'],
+
+   3. En setTodayDates(), cambiar el array a:
+      ['f1_fecha','f2_fecha','f3_fecha','f4_fecha','f5_fecha']
+
+   4. En prefillLevantadoPor(), cambiar el array a:
+      ['f1_levantado_por','f2_levantado_por','f3_levantado_por',
+       'f4_levantado_por','f5_levantado_por']
+
+   5. En showView() en el objeto titles, AÑADIR:
+      form4: 'Cementerios y Bóvedas',
+      form5: 'Personas Fallecidas',
+
+   6. En DEFAULT_USERS, dar acceso al admin y supervisor:
+      { id:1, ..., forms:[1,2,3,4,5] },
+      { id:2, ..., forms:[1,2,3,4,5] },
+
+   ============================================================ */
 init();
