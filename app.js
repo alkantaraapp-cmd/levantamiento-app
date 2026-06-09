@@ -961,37 +961,7 @@ resetForm = function(formId) {
     document.querySelectorAll('#view-form5 .toggle-btn').forEach(b => b.classList.remove('active'));
   }
 };
-/* ============================================================
-   CAMBIOS TAMBIÉN NECESARIOS EN app.js (editar manualmente)
-   ============================================================
 
-   1. En const FORMS = { ... }, AÑADIR antes del cierre }:
-      4: { name:'Cementerios y Bóvedas', icon:'🏛️', sheet:'Cementerios_Bovedas' },
-      5: { name:'Personas Fallecidas',   icon:'⚰️', sheet:'Difuntos' },
-
-   2. En const REQUIRED = { ... }, AÑADIR antes del cierre }:
-      4: ['f4_cementerio','f4_sector','f4_manzana','f4_num_lote',
-          'f4_nombre_cementerio','f4_status_lote','f4_nombre_boveda',
-          'f4_materiales','f4_condiciones','f4_fecha','f4_levantado_por'],
-      5: ['f5_georeferencia_base','f5_estado_nicho','f5_terminal_nicho',
-          'f5_posicion','f5_fecha','f5_levantado_por'],
-
-   3. En setTodayDates(), cambiar el array a:
-      ['f1_fecha','f2_fecha','f3_fecha','f4_fecha','f5_fecha']
-
-   4. En prefillLevantadoPor(), cambiar el array a:
-      ['f1_levantado_por','f2_levantado_por','f3_levantado_por',
-       'f4_levantado_por','f5_levantado_por']
-
-   5. En showView() en el objeto titles, AÑADIR:
-      form4: 'Cementerios y Bóvedas',
-      form5: 'Personas Fallecidas',
-
-   6. En DEFAULT_USERS, dar acceso al admin y supervisor:
-      { id:1, ..., forms:[1,2,3,4,5] },
-      { id:2, ..., forms:[1,2,3,4,5] },
-
-   ============================================================ */
 /* ============================================================
    INIT
    ============================================================ */
