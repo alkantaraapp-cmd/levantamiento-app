@@ -359,6 +359,286 @@
       </div>
     </div>
 
+    <!-- FORMULARIO 4: CEMENTERIOS Y BÓVEDAS -->
+<div class="view" id="view-form4">
+  <div class="form-scroll">
+ 
+    <!-- Sección: Georeferencia -->
+    <div class="form-section-header">
+      <div class="section-icon">🗺️</div>
+      <div>
+        <div class="section-title">Cementerios y Bóvedas</div>
+        <div class="section-sub">Ubicación y datos del lote</div>
+      </div>
+    </div>
+ 
+    <div class="fields-grid">
+ 
+      <!-- Coordenada Google Maps -->
+      <div class="field-group full">
+        <label>Coordenada Google Maps (Ubicación) *</label>
+        <div class="gps-box">
+          <div class="gps-coords" id="f4_gps_coords">Sin ubicación capturada</div>
+          <button class="btn-gps" onclick="getGPS('f4')">📍 Capturar</button>
+        </div>
+        <input type="hidden" id="f4_lat">
+        <input type="hidden" id="f4_lng">
+        <input type="hidden" id="f4_maps_url">
+      </div>
+ 
+      <!-- Foto -->
+      <div class="field-group full">
+        <label>Foto</label>
+        <div class="photo-box">
+          <img id="f4_photo_preview" src="" style="display:none;max-width:100%;max-height:200px;border-radius:8px;object-fit:cover;">
+          <div class="photo-placeholder" id="f4_photo_ph">
+            <span>📷</span>
+            <span>Tomar foto o seleccionar imagen</span>
+          </div>
+          <div class="photo-btns">
+            <button class="btn-photo" onclick="takePhoto('f4')">📷 Cámara</button>
+            <button class="btn-photo" onclick="pickPhoto('f4')">🖼 Galería</button>
+          </div>
+        </div>
+        <input type="hidden" id="f4_photo_data">
+        <input type="file" id="f4_camera_input" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto('f4',this)">
+        <input type="file" id="f4_photo_input" accept="image/*" style="display:none" onchange="handlePhoto('f4',this)">
+      </div>
+ 
+      <!-- Cementerio -->
+      <div class="field-group">
+        <label>Cementerio *</label>
+        <select id="f4_cementerio" onchange="actualizarGeoreferencia4()">
+          <option value="">Selecciona...</option>
+          <option>I</option><option>II</option><option>III</option>
+          <option>CI</option><option>CII</option><option>CIII</option>
+        </select>
+      </div>
+ 
+      <!-- Sector -->
+      <div class="field-group">
+        <label>Sector *</label>
+        <select id="f4_sector" onchange="actualizarGeoreferencia4()">
+          <option value="">Selecciona...</option>
+          <option>1A</option><option>1B</option><option>1C</option><option>1D</option>
+          <option>1E</option><option>1F</option><option>1G</option><option>1H</option>
+        </select>
+      </div>
+ 
+      <!-- Manzana -->
+      <div class="field-group">
+        <label>Manzana *</label>
+        <input type="number" id="f4_manzana" placeholder="Número" min="1" oninput="actualizarGeoreferencia4()">
+      </div>
+ 
+      <!-- Número de Lote -->
+      <div class="field-group">
+        <label>Número de Lote *</label>
+        <input type="number" id="f4_num_lote" placeholder="Número" min="1" oninput="actualizarGeoreferencia4()">
+      </div>
+ 
+      <!-- Georeferencia (auto-calculado) -->
+      <div class="field-group full">
+        <label>Georeferencia</label>
+        <input type="text" id="f4_georeferencia" readonly placeholder="Se genera automáticamente" style="background:#f0f7ff;color:var(--navy);font-weight:600;">
+      </div>
+ 
+    </div>
+ 
+    <!-- Sección: Condición del Lote -->
+    <div class="form-section-header">
+      <div class="section-icon">🏷️</div>
+      <div>
+        <div class="section-title">Condición del Lote</div>
+        <div class="section-sub">Clasificación y estado</div>
+      </div>
+    </div>
+ 
+    <div class="fields-grid">
+ 
+      <!-- Nombre del Cementerio -->
+      <div class="field-group full">
+        <label>Nombre del Cementerio *</label>
+        <input type="hidden" id="f4_nombre_cementerio">
+        <div class="toggle-group" id="f4_nombre_cementerio_toggle">
+          <button class="toggle-btn" onclick="setToggle('f4_nombre_cementerio','ORNAMENTAL',this)">ORNAMENTAL</button>
+          <button class="toggle-btn" onclick="setToggle('f4_nombre_cementerio','LAS LAGUNAS',this)">LAS LAGUNAS</button>
+          <button class="toggle-btn" onclick="setToggle('f4_nombre_cementerio','GUARIONEX',this)">GUARIONEX</button>
+        </div>
+      </div>
+ 
+      <!-- Status Lote -->
+      <div class="field-group full">
+        <label>Status del Lote *</label>
+        <input type="hidden" id="f4_status_lote">
+        <div class="toggle-group" id="f4_status_lote_toggle">
+          <button class="toggle-btn" onclick="setToggle('f4_status_lote','PÚBLICA',this)">PÚBLICA</button>
+          <button class="toggle-btn" onclick="setToggle('f4_status_lote','PRIVADA',this)">PRIVADA</button>
+          <button class="toggle-btn" onclick="setToggle('f4_status_lote','ALQUILADO',this)">ALQUILADO</button>
+          <button class="toggle-btn" onclick="setToggle('f4_status_lote','TIERRA',this)">TIERRA</button>
+        </div>
+      </div>
+ 
+    </div>
+ 
+    <!-- Sección: Datos de la Bóveda -->
+    <div class="form-section-header">
+      <div class="section-icon">🏛️</div>
+      <div>
+        <div class="section-title">Datos de la Bóveda</div>
+        <div class="section-sub">Información estructural</div>
+      </div>
+    </div>
+ 
+    <div class="fields-grid">
+ 
+      <!-- Nombre de la Bóveda -->
+      <div class="field-group full">
+        <label>Nombre de la Bóveda *</label>
+        <textarea id="f4_nombre_boveda" rows="2" placeholder="Nombre completo de la bóveda..."></textarea>
+      </div>
+ 
+      <!-- Cantidad de Nichos -->
+      <div class="field-group">
+        <label>Cantidad de Nichos *</label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button onclick="incrementar('f4_cant_nichos',-1)" style="width:40px;height:40px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);font-size:20px;cursor:pointer;color:var(--navy)">−</button>
+          <input type="number" id="f4_cant_nichos" value="0" min="0" style="text-align:center;font-size:18px;font-weight:700;color:var(--navy);">
+          <button onclick="incrementar('f4_cant_nichos',1)" style="width:40px;height:40px;border:1.5px solid var(--border);border-radius:8px;background:var(--navy);color:white;font-size:20px;cursor:pointer;">+</button>
+        </div>
+      </div>
+ 
+      <!-- Cantidad de Niveles -->
+      <div class="field-group">
+        <label>Cantidad de Niveles *</label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button onclick="incrementar('f4_cant_niveles',-1)" style="width:40px;height:40px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);font-size:20px;cursor:pointer;color:var(--navy)">−</button>
+          <input type="number" id="f4_cant_niveles" value="0" min="0" style="text-align:center;font-size:18px;font-weight:700;color:var(--navy);">
+          <button onclick="incrementar('f4_cant_niveles',1)" style="width:40px;height:40px;border:1.5px solid var(--border);border-radius:8px;background:var(--navy);color:white;font-size:20px;cursor:pointer;">+</button>
+        </div>
+      </div>
+ 
+      <!-- Materiales -->
+      <div class="field-group full">
+        <label>Materiales *</label>
+        <input type="hidden" id="f4_materiales">
+        <div class="toggle-group">
+          <button class="toggle-btn" onclick="setToggle('f4_materiales','BLOCK',this)">BLOCK</button>
+          <button class="toggle-btn" onclick="setToggle('f4_materiales','TIERRA',this)">TIERRA</button>
+        </div>
+      </div>
+ 
+      <!-- Condiciones -->
+      <div class="field-group full">
+        <label>Condiciones *</label>
+        <input type="hidden" id="f4_condiciones">
+        <div class="toggle-group">
+          <button class="toggle-btn" onclick="setToggle('f4_condiciones','BUENO',this)">BUENO</button>
+          <button class="toggle-btn" onclick="setToggle('f4_condiciones','MALO',this)">MALO</button>
+        </div>
+      </div>
+ 
+      <!-- Fecha -->
+      <div class="field-group">
+        <label>Fecha *</label>
+        <input type="date" id="f4_fecha">
+      </div>
+ 
+      <!-- Levantado por -->
+      <div class="field-group">
+        <label>Levantado por *</label>
+        <input type="text" id="f4_levantado_por" placeholder="Nombre del empleado">
+      </div>
+ 
+    </div>
+ 
+    <button class="btn-submit" onclick="submitForm(4)">💾 Guardar registro</button>
+  </div>
+</div>
+ 
+ 
+<!-- FORMULARIO 5: PERSONAS FALLECIDAS (DIFUNTOS) -->
+<div class="view" id="view-form5">
+  <div class="form-scroll">
+ 
+    <div class="form-section-header">
+      <div class="section-icon">⚰️</div>
+      <div>
+        <div class="section-title">Personas Fallecidas</div>
+        <div class="section-sub">Registro de difuntos y nichos</div>
+      </div>
+    </div>
+ 
+    <div class="fields-grid">
+ 
+      <!-- Georeferencia base (se escribe o se selecciona de la bóveda) -->
+      <div class="field-group full">
+        <label>Georeferencia (del lote) *</label>
+        <input type="text" id="f5_georeferencia_base" placeholder="Ej: I-1A-3-12" oninput="actualizarNumeroNicho5()">
+      </div>
+ 
+      <!-- Estado del Nicho -->
+      <div class="field-group full">
+        <label>Estado del Nicho *</label>
+        <input type="hidden" id="f5_estado_nicho">
+        <div class="toggle-group">
+          <button class="toggle-btn" onclick="setToggle('f5_estado_nicho','OCUPADO',this)">OCUPADO</button>
+          <button class="toggle-btn" onclick="setToggle('f5_estado_nicho','VACÍO',this)">VACÍO</button>
+        </div>
+      </div>
+ 
+      <!-- Terminal del Nicho -->
+      <div class="field-group full">
+        <label>Terminal del Nicho *</label>
+        <input type="hidden" id="f5_terminal_nicho">
+        <div class="toggle-group" style="flex-wrap:wrap;gap:6px;" id="f5_terminal_toggle">
+          <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','A',this);actualizarNumeroNicho5()">A</button>
+          <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','B',this);actualizarNumeroNicho5()">B</button>
+          <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','C',this);actualizarNumeroNicho5()">C</button>
+          <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','D',this);actualizarNumeroNicho5()">D</button>
+          <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','E',this);actualizarNumeroNicho5()">E</button>
+          <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','F',this);actualizarNumeroNicho5()">F</button>
+          <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','G',this);actualizarNumeroNicho5()">G</button>
+          <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','H',this);actualizarNumeroNicho5()">H</button>
+          <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','I',this);actualizarNumeroNicho5()">I</button>
+          <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','J',this);actualizarNumeroNicho5()">J</button>
+          <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','K',this);actualizarNumeroNicho5()">K</button>
+        </div>
+      </div>
+ 
+      <!-- Posición -->
+      <div class="field-group">
+        <label>Posición *</label>
+        <select id="f5_posicion" onchange="actualizarNumeroNicho5()">
+          <option value="">Selecciona...</option>
+          <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+          <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+        </select>
+      </div>
+ 
+      <!-- Número de Nicho (auto-calculado) -->
+      <div class="field-group">
+        <label>Número de Nicho</label>
+        <input type="text" id="f5_numero_nicho" readonly placeholder="Se genera automáticamente" style="background:#f0f7ff;color:var(--navy);font-weight:600;">
+      </div>
+ 
+      <!-- Fecha -->
+      <div class="field-group">
+        <label>Fecha *</label>
+        <input type="date" id="f5_fecha">
+      </div>
+ 
+      <!-- Levantado por -->
+      <div class="field-group">
+        <label>Levantado por *</label>
+        <input type="text" id="f5_levantado_por" placeholder="Nombre del empleado">
+      </div>
+     </div>
+ 
+    <button class="btn-submit" onclick="submitForm(5)">💾 Guardar registro</button>
+  </div>
+</div>
+    
     <!-- VISTA: MIS REGISTROS -->
     <div id="view-history" class="view">
       <div class="filter-bar">
