@@ -466,6 +466,16 @@ function agregarDifunto() {
         </div>
       </div>
 
+      <div class="field-group full">
+        <label>Nombre del Difunto *</label>
+        <input type="text" class="d-nombre" placeholder="Nombre completo del difunto">
+      </div>
+
+      <div class="field-group">
+        <label>Fecha de Fallecimiento *</label>
+        <input type="date" class="d-fecha-fallecimiento">
+      </div>
+
       <div class="field-group">
         <label>Posición *</label>
         <select class="d-posicion" onchange="actualizarNichoEnCard(this.closest('.difunto-card'))">
@@ -558,7 +568,9 @@ function submitForm4() {
     cards.forEach(function(card, i) {
       const difData = Object.assign({}, baseData);
       difData.localId = Date.now() + i;
-      difData.difunto_num      = i + 1;
+      difData.difunto_num        = i + 1;
+      difData.nombre_difunto     = card.querySelector(".d-nombre").value;
+      difData.fecha_fallecimiento= card.querySelector(".d-fecha-fallecimiento").value;
       difData.estado_nicho     = card.querySelector('.d-estado-hidden').value;
       difData.terminal_nicho   = card.querySelector('.d-terminal-hidden').value;
       difData.posicion         = card.querySelector('.d-posicion').value;
