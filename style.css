@@ -634,3 +634,32 @@ html, body {
   cursor: not-allowed;
   pointer-events: none;
 }
+/* ===== DIFUNTOS — tarjetas dinámicas ===== */
+.difunto-card {
+  background: #f8faff;
+  border: 1.5px solid #bee3f8;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+  transition: border 0.2s;
+}
+.difunto-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.btn-agregar-difunto {
+  width: 100%;
+  margin: 16px 0 8px;
+  padding: 14px;
+  background: #eff6ff;
+  border: 2px dashed #93c5fd;
+  border-radius: 14px;
+  color: var(--navy);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-agregar-difunto:active { background: #dbeafe; }
