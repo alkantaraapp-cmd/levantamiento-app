@@ -14,6 +14,36 @@
 <link rel="manifest" href="manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<style>
+.difunto-card {
+  background: #f8faff;
+  border: 1.5px solid #bee3f8;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+  transition: border 0.2s;
+}
+.difunto-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.btn-agregar-difunto {
+  width: 100%;
+  margin: 16px 0 8px;
+  padding: 14px;
+  background: #eff6ff;
+  border: 2px dashed #93c5fd;
+  border-radius: 14px;
+  color: var(--navy);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-agregar-difunto:active { background: #dbeafe; }
+</style>
 </head>
 <body>
 
@@ -99,10 +129,7 @@
       <div class="form-scroll">
         <div class="form-section-header">
           <div class="section-icon">👤</div>
-          <div>
-            <div class="section-title">Datos Personales</div>
-            <div class="section-sub">Información del contribuyente</div>
-          </div>
+          <div><div class="section-title">Datos Personales</div><div class="section-sub">Información del contribuyente</div></div>
         </div>
         <div class="fields-grid">
           <div class="field-group full"><label>Nombres *</label><input type="text" id="f1_nombres" placeholder="Nombres completos"></div>
@@ -114,13 +141,9 @@
           <div class="field-group"><label>Categoría *</label><input type="text" id="f1_categoria" placeholder="Categoría"></div>
           <div class="field-group"><label>Tarifa Mensual *</label><input type="text" id="f1_tarifa" placeholder="Ej: RD$1,500"></div>
         </div>
-
         <div class="form-section-header">
           <div class="section-icon">📍</div>
-          <div>
-            <div class="section-title">Dirección</div>
-            <div class="section-sub">Ubicación del contribuyente</div>
-          </div>
+          <div><div class="section-title">Dirección</div><div class="section-sub">Ubicación del contribuyente</div></div>
         </div>
         <div class="fields-grid">
           <div class="field-group full"><label>Georeferencia</label><input type="text" id="f1_georef" placeholder="Ej: 18.4861° N, 69.9312° W"></div>
@@ -130,21 +153,13 @@
           <div class="field-group full"><label>Referencia</label><textarea id="f1_referencia" rows="2" placeholder="Referencia de ubicación (ej: frente al parque)"></textarea></div>
           <div class="field-group full">
             <label>Ubicación GPS</label>
-            <div class="gps-box" id="f1_gps_box">
-              <div class="gps-coords" id="f1_gps_coords">Sin ubicación capturada</div>
-              <button class="btn-gps" onclick="getGPS('f1')">📍 Capturar ubicación</button>
-            </div>
-            <input type="hidden" id="f1_lat"><input type="hidden" id="f1_lng">
-            <input type="hidden" id="f1_maps_url">
+            <div class="gps-box"><div class="gps-coords" id="f1_gps_coords">Sin ubicación capturada</div><button class="btn-gps" onclick="getGPS('f1')">📍 Capturar ubicación</button></div>
+            <input type="hidden" id="f1_lat"><input type="hidden" id="f1_lng"><input type="hidden" id="f1_maps_url">
           </div>
         </div>
-
         <div class="form-section-header">
           <div class="section-icon">📢</div>
-          <div>
-            <div class="section-title">Publicidad</div>
-            <div class="section-sub">Información de publicidad comercial</div>
-          </div>
+          <div><div class="section-title">Publicidad</div><div class="section-sub">Información de publicidad comercial</div></div>
         </div>
         <div class="fields-grid">
           <div class="field-group full">
@@ -160,13 +175,9 @@
               <div class="field-group full"><label>Tipo de Letrero</label>
                 <select id="f1_tipo_letrero">
                   <option value="">Selecciona...</option>
-                  <option>Letras Encajonadas</option>
-                  <option>Adosado a la Fachada</option>
-                  <option>Letrero Tipo Bandera</option>
-                  <option>Street Banner</option>
-                  <option>Letrero Tipo Valla</option>
-                  <option>Vallas Publicitarias</option>
-                  <option>Pantallas Publicitarias</option>
+                  <option>Letras Encajonadas</option><option>Adosado a la Fachada</option>
+                  <option>Letrero Tipo Bandera</option><option>Street Banner</option>
+                  <option>Letrero Tipo Valla</option><option>Vallas Publicitarias</option><option>Pantallas Publicitarias</option>
                 </select>
               </div>
               <div class="field-group"><label>Cantidad</label><input type="number" id="f1_cantidad" placeholder="Ej: 2" min="1" max="50" inputmode="numeric"></div>
@@ -175,7 +186,7 @@
           </div>
           <div class="field-group full">
             <label>Foto</label>
-            <div class="photo-box" id="f1_photo_box">
+            <div class="photo-box">
               <img id="f1_photo_preview" style="display:none">
               <div class="photo-placeholder" id="f1_photo_ph"><span>📷</span><span>Tomar foto o seleccionar imagen</span></div>
               <div class="photo-btns">
@@ -206,10 +217,7 @@
       <div class="form-scroll">
         <div class="form-section-header">
           <div class="section-icon">📊</div>
-          <div>
-            <div class="section-title">Levantamiento General</div>
-            <div class="section-sub">Datos de publicidad y señalización</div>
-          </div>
+          <div><div class="section-title">Levantamiento General</div><div class="section-sub">Datos de publicidad y señalización</div></div>
         </div>
         <div class="fields-grid">
           <div class="field-group full"><label>Nombre *</label><input type="text" id="f2_nombre" placeholder="Nombre del contribuyente o negocio"></div>
@@ -217,20 +225,15 @@
           <div class="field-group full"><label>Tipo de Cliente</label><textarea id="f2_tipo_cliente" rows="2" placeholder="Descripción del tipo de cliente"></textarea></div>
           <div class="field-group full">
             <label>Ubicación GPS *</label>
-            <div class="gps-box">
-              <div class="gps-coords" id="f2_gps_coords">Sin ubicación capturada</div>
-              <button class="btn-gps" onclick="getGPS('f2')">📍 Capturar ubicación</button>
-            </div>
-            <input type="hidden" id="f2_lat"><input type="hidden" id="f2_lng">
-            <input type="hidden" id="f2_maps_url">
+            <div class="gps-box"><div class="gps-coords" id="f2_gps_coords">Sin ubicación capturada</div><button class="btn-gps" onclick="getGPS('f2')">📍 Capturar ubicación</button></div>
+            <input type="hidden" id="f2_lat"><input type="hidden" id="f2_lng"><input type="hidden" id="f2_maps_url">
           </div>
           <div class="field-group full"><label>Tipo de Letrero *</label>
             <select id="f2_tipo_letrero">
               <option value="">Selecciona...</option>
               <option>Letras Encajonadas</option><option>Adosado a la Fachada</option>
               <option>Letrero Tipo Bandera</option><option>Street Banner</option>
-              <option>Letrero Tipo Valla</option><option>Vallas Publicitarias</option>
-              <option>Pantallas Publicitarias</option>
+              <option>Letrero Tipo Valla</option><option>Vallas Publicitarias</option><option>Pantallas Publicitarias</option>
             </select>
           </div>
           <div class="field-group"><label>Característica *</label>
@@ -272,20 +275,13 @@
       <div class="form-scroll">
         <div class="form-section-header">
           <div class="section-icon">🏗️</div>
-          <div>
-            <div class="section-title">Levantamiento de Construcción</div>
-            <div class="section-sub">Registro de obra o construcción</div>
-          </div>
+          <div><div class="section-title">Levantamiento de Construcción</div><div class="section-sub">Registro de obra o construcción</div></div>
         </div>
         <div class="fields-grid">
           <div class="field-group full">
             <label>Ubicación GPS *</label>
-            <div class="gps-box">
-              <div class="gps-coords" id="f3_gps_coords">Sin ubicación capturada</div>
-              <button class="btn-gps" onclick="getGPS('f3')">📍 Capturar ubicación</button>
-            </div>
-            <input type="hidden" id="f3_lat"><input type="hidden" id="f3_lng">
-            <input type="hidden" id="f3_maps_url">
+            <div class="gps-box"><div class="gps-coords" id="f3_gps_coords">Sin ubicación capturada</div><button class="btn-gps" onclick="getGPS('f3')">📍 Capturar ubicación</button></div>
+            <input type="hidden" id="f3_lat"><input type="hidden" id="f3_lng"><input type="hidden" id="f3_maps_url">
           </div>
           <div class="field-group full">
             <label>Foto *</label>
@@ -316,19 +312,18 @@
       </div>
     </div>
 
-    <!-- FORMULARIO 4: CEMENTERIOS Y BÓVEDAS -->
+    <!-- FORMULARIO 4: CEMENTERIOS Y BÓVEDAS + DIFUNTOS INTEGRADOS -->
     <div class="view" id="view-form4">
       <div class="form-scroll">
+
+        <!-- SECCIÓN 1: UBICACIÓN -->
         <div class="form-section-header">
           <div class="section-icon">🗺️</div>
-          <div>
-            <div class="section-title">Cementerios y Bóvedas</div>
-            <div class="section-sub">Ubicación y datos del lote</div>
-          </div>
+          <div><div class="section-title">Cementerios y Bóvedas</div><div class="section-sub">Ubicación y datos del lote</div></div>
         </div>
         <div class="fields-grid">
           <div class="field-group full">
-            <label>Coordenada Google Maps (Ubicación) *</label>
+            <label>Coordenada Google Maps *</label>
             <div class="gps-box">
               <div class="gps-coords" id="f4_gps_coords">Sin ubicación capturada</div>
               <button class="btn-gps" onclick="getGPS('f4')">📍 Capturar</button>
@@ -381,12 +376,10 @@
           </div>
         </div>
 
+        <!-- SECCIÓN 2: CONDICIÓN DEL LOTE -->
         <div class="form-section-header">
           <div class="section-icon">🏷️</div>
-          <div>
-            <div class="section-title">Condición del Lote</div>
-            <div class="section-sub">Clasificación y estado</div>
-          </div>
+          <div><div class="section-title">Condición del Lote</div><div class="section-sub">Clasificación y estado</div></div>
         </div>
         <div class="fields-grid">
           <div class="field-group full">
@@ -410,12 +403,10 @@
           </div>
         </div>
 
+        <!-- SECCIÓN 3: DATOS DE LA BÓVEDA -->
         <div class="form-section-header">
           <div class="section-icon">🏛️</div>
-          <div>
-            <div class="section-title">Datos de la Bóveda</div>
-            <div class="section-sub">Información estructural</div>
-          </div>
+          <div><div class="section-title">Datos de la Bóveda</div><div class="section-sub">Información estructural</div></div>
         </div>
         <div class="fields-grid">
           <div class="field-group full">
@@ -457,66 +448,21 @@
           <div class="field-group"><label>Fecha *</label><input type="date" id="f4_fecha"></div>
           <div class="field-group"><label>Levantado por *</label><input type="text" id="f4_levantado_por" placeholder="Nombre del empleado"></div>
         </div>
-        <button class="btn-submit" onclick="submitForm(4)">💾 Guardar registro</button>
-      </div>
-    </div>
 
-    <!-- FORMULARIO 5: PERSONAS FALLECIDAS -->
-    <div class="view" id="view-form5">
-      <div class="form-scroll">
-        <div class="form-section-header">
+        <!-- SECCIÓN 4: DIFUNTOS -->
+        <div class="form-section-header" style="margin-top:20px;">
           <div class="section-icon">⚰️</div>
-          <div>
-            <div class="section-title">Personas Fallecidas</div>
-            <div class="section-sub">Registro de difuntos y nichos</div>
-          </div>
+          <div><div class="section-title">Personas Fallecidas</div><div class="section-sub">Agrega uno o más difuntos de esta bóveda</div></div>
         </div>
-        <div class="fields-grid">
-          <div class="field-group full">
-            <label>Georeferencia (del lote) *</label>
-            <input type="text" id="f5_georeferencia_base" placeholder="Ej: I-1A-3-12" oninput="actualizarNumeroNicho5()">
-          </div>
-          <div class="field-group full">
-            <label>Estado del Nicho *</label>
-            <input type="hidden" id="f5_estado_nicho">
-            <div class="toggle-group">
-              <button class="toggle-btn" onclick="setToggle('f5_estado_nicho','OCUPADO',this)">OCUPADO</button>
-              <button class="toggle-btn" onclick="setToggle('f5_estado_nicho','VACÍO',this)">VACÍO</button>
-            </div>
-          </div>
-          <div class="field-group full">
-            <label>Terminal del Nicho *</label>
-            <input type="hidden" id="f5_terminal_nicho">
-            <div class="toggle-group" style="flex-wrap:wrap;gap:6px;">
-              <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','A',this);actualizarNumeroNicho5()">A</button>
-              <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','B',this);actualizarNumeroNicho5()">B</button>
-              <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','C',this);actualizarNumeroNicho5()">C</button>
-              <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','D',this);actualizarNumeroNicho5()">D</button>
-              <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','E',this);actualizarNumeroNicho5()">E</button>
-              <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','F',this);actualizarNumeroNicho5()">F</button>
-              <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','G',this);actualizarNumeroNicho5()">G</button>
-              <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','H',this);actualizarNumeroNicho5()">H</button>
-              <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','I',this);actualizarNumeroNicho5()">I</button>
-              <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','J',this);actualizarNumeroNicho5()">J</button>
-              <button class="toggle-btn" style="flex:0 0 calc(20% - 6px)" onclick="setToggle('f5_terminal_nicho','K',this);actualizarNumeroNicho5()">K</button>
-            </div>
-          </div>
-          <div class="field-group">
-            <label>Posición *</label>
-            <select id="f5_posicion" onchange="actualizarNumeroNicho5()">
-              <option value="">Selecciona...</option>
-              <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-              <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
-            </select>
-          </div>
-          <div class="field-group">
-            <label>Número de Nicho</label>
-            <input type="text" id="f5_numero_nicho" readonly placeholder="Se genera automáticamente" style="background:#f0f7ff;color:var(--navy);font-weight:600;">
-          </div>
-          <div class="field-group"><label>Fecha *</label><input type="date" id="f5_fecha"></div>
-          <div class="field-group"><label>Levantado por *</label><input type="text" id="f5_levantado_por" placeholder="Nombre del empleado"></div>
-        </div>
-        <button class="btn-submit" onclick="submitForm(5)">💾 Guardar registro</button>
+
+        <!-- Contenedor dinámico — se llena con JS -->
+        <div id="difuntos-container"></div>
+
+        <button class="btn-agregar-difunto" onclick="agregarDifunto()">➕ Agregar difunto</button>
+
+        <!-- Botón guardar — llama a submitForm4() -->
+        <button class="btn-submit" onclick="submitForm4()">💾 Guardar registro</button>
+
       </div>
     </div>
 
@@ -529,7 +475,6 @@
           <option value="2">Datos</option>
           <option value="3">Construcción</option>
           <option value="4">Cementerios y Bóvedas</option>
-          <option value="5">Personas Fallecidas</option>
         </select>
         <select id="history-status" onchange="renderHistory()">
           <option value="">Todos los estados</option>
@@ -542,17 +487,13 @@
 
     <!-- VISTA: ADMIN - USUARIOS -->
     <div id="view-admin-users" class="view">
-      <div class="admin-toolbar">
-        <button class="btn-admin-add" onclick="openUserModal()">+ Nuevo usuario</button>
-      </div>
+      <div class="admin-toolbar"><button class="btn-admin-add" onclick="openUserModal()">+ Nuevo usuario</button></div>
       <div id="users-list" class="admin-list"></div>
     </div>
 
     <!-- VISTA: ADMIN - FORMULARIOS -->
     <div id="view-admin-forms" class="view">
-      <div class="admin-toolbar">
-        <button class="btn-admin-add" onclick="openFormBuilder()">+ Nuevo formulario</button>
-      </div>
+      <div class="admin-toolbar"><button class="btn-admin-add" onclick="openFormBuilder()">+ Nuevo formulario</button></div>
       <div id="custom-forms-list" class="admin-list"></div>
     </div>
 
@@ -565,10 +506,7 @@
     <!-- VISTA: RASTREO GPS -->
     <div id="view-rastreo" class="view">
       <div class="rastreo-toolbar">
-        <div class="rastreo-status">
-          <div class="rastreo-dot" id="rastreo-dot"></div>
-          <span id="rastreo-label">Rastreo inactivo</span>
-        </div>
+        <div class="rastreo-status"><div class="rastreo-dot" id="rastreo-dot"></div><span id="rastreo-label">Rastreo inactivo</span></div>
         <button class="btn-rastreo" id="btn-rastreo" onclick="toggleRastreo()">▶ Iniciar</button>
       </div>
       <div id="rastreo-map" class="rastreo-map">
@@ -603,16 +541,13 @@
           <option value="2">Datos</option>
           <option value="3">Construccion</option>
           <option value="4">Cementerios y Bóvedas</option>
-          <option value="5">Personas Fallecidas</option>
         </select>
         <select id="consulta-poligono" onchange="filtrarConsulta()">
           <option value="">Todos los poligonos</option>
           <option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option>
           <option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option>
         </select>
-        <select id="consulta-usuario" onchange="filtrarConsulta()">
-          <option value="">Todos los usuarios</option>
-        </select>
+        <select id="consulta-usuario" onchange="filtrarConsulta()"><option value="">Todos los usuarios</option></select>
         <input type="date" id="consulta-fecha-ini" onchange="filtrarConsulta()">
         <input type="date" id="consulta-fecha-fin" onchange="filtrarConsulta()">
         <button class="btn-limpiar" onclick="limpiarFiltros()">Limpiar filtros</button>
