@@ -55,8 +55,8 @@ function borrarFotoLocal(localId) {
 }
 
 const DEFAULT_USERS = [
-  { id:1, nombre:'Administrador', usuario:'admin', pass:'admin123', rol:'admin',      forms:[1,2,3,4,5] },
-  { id:2, nombre:'Supervisor',    usuario:'super', pass:'super123', rol:'supervisor',  forms:[1,2,3,4,5] },
+  { id:1, nombre:'Administrador', usuario:'admin', pass:'admin123', rol:'admin',      forms:[1,2,3,4] },
+  { id:2, nombre:'Supervisor',    usuario:'super', pass:'super123', rol:'supervisor',  forms:[1,2,3,4] },
   { id:3, nombre:'Empleado 1',    usuario:'emp1',  pass:'emp123',   rol:'empleado',    forms:[1] },
 ];
 
@@ -65,7 +65,6 @@ const FORMS = {
   2: { name:'Levantamiento de Datos',          icon:'📊', sheet:'Datos' },
   3: { name:'Levantamiento de Construccion',   icon:'🏗️', sheet:'Construccion' },
   4: { name:'Cementerios y Bóvedas',           icon:'🏛️', sheet:'Cementerios_Bovedas' },
-  5: { name:'Personas Fallecidas',             icon:'⚰️', sheet:'Difuntos' },
 };
 
 const REQUIRED = {
@@ -73,7 +72,6 @@ const REQUIRED = {
   2: ['f2_nombre','f2_rmc','f2_poligono','f2_fecha','f2_levantado_por'],
   3: ['f3_poligono','f3_fecha','f3_levantado_por'],
   4: ['f4_cementerio','f4_sector','f4_manzana','f4_num_lote','f4_nombre_cementerio','f4_status_lote','f4_nombre_boveda','f4_materiales','f4_condiciones','f4_fecha','f4_levantado_por'],
-  5: ['f5_georeferencia_base','f5_estado_nicho','f5_terminal_nicho','f5_posicion','f5_fecha','f5_levantado_por'],
 };
 
 let currentUser = null;
@@ -221,7 +219,7 @@ function showView(name) {
   if (v) { v.classList.add('active'); v.scrollTop=0; }
   const titles = {
     home:'Inicio', form1:'Contribuyentes', form2:'Levantamiento de Datos',
-    form3:'Construcción', form4:'Cementerios y Bóvedas', form5:'Personas Fallecidas',
+    form3:'Construcción', form4:'Cementerios y Bóvedas',
     history:'Mis registros', reports:'Reportes',
     consulta:'Consulta de Datos', rastreo:'Rastreo GPS',
     'admin-users':'Usuarios', 'admin-forms':'Formularios', detalle:'Detalle'
@@ -241,7 +239,7 @@ function closeMenu() {
 }
 
 /* ============================================================
-   GPS — siempre punto decimal, nunca coma
+   GPS
    ============================================================ */
 function getGPS(prefix) {
   const el = document.getElementById(prefix+'_gps_coords');
@@ -313,16 +311,16 @@ function setToggle(fieldId, val, btn) {
    ============================================================ */
 function setTodayDates() {
   const today = new Date().toISOString().split('T')[0];
-  ['f1_fecha','f2_fecha','f3_fecha','f4_fecha','f5_fecha'].forEach(id => { const el=document.getElementById(id); if(el) el.value=today; });
+  ['f1_fecha','f2_fecha','f3_fecha','f4_fecha'].forEach(id => { const el=document.getElementById(id); if(el) el.value=today; });
 }
 function prefillLevantadoPor() {
-  ['f1_levantado_por','f2_levantado_por','f3_levantado_por','f4_levantado_por','f5_levantado_por'].forEach(id => {
+  ['f1_levantado_por','f2_levantado_por','f3_levantado_por','f4_levantado_por'].forEach(id => {
     const el=document.getElementById(id); if(el&&currentUser) el.value=currentUser.nombre;
   });
 }
 
 /* ============================================================
-   SUBMIT — versión simple y robusta
+   SUBMIT FORM 1, 2, 3 — sin cambios
    ============================================================ */
 function submitForm(formId) {
   const btn = document.querySelector('#view-form'+formId+' .btn-submit');
@@ -379,23 +377,260 @@ function submitForm(formId) {
     data.photo_data = photoData;
     window.setTimeout(function() {
       sendToSheets(data)
-        .then(function() {
-          updateCacheStatus(data.localId, 'synced');
-          borrarFotoLocal(data.localId);
-        })
+        .then(function() { updateCacheStatus(data.localId, 'synced'); borrarFotoLocal(data.localId); })
         .catch(function() {});
     }, 800);
   }
 }
 
-function updateCacheStatus(localId, status) {
-  try {
-    const cache = JSON.parse(localStorage.getItem('registros_cache')||'[]');
-    const idx = cache.findIndex(r => r.localId===localId);
-    if (idx>=0) { cache[idx].status=status; localStorage.setItem('registros_cache',JSON.stringify(cache)); }
-  } catch(e) {}
+/* ============================================================
+   FORMULARIO 4 — CEMENTERIOS + DIFUNTOS INTEGRADOS
+   ============================================================ */
+let difuntosCount = 0;
+
+function actualizarGeoreferencia4() {
+  const cem    = document.getElementById('f4_cementerio')?.value || '';
+  const sector = document.getElementById('f4_sector')?.value    || '';
+  const manz   = document.getElementById('f4_manzana')?.value   || '';
+  const lote   = document.getElementById('f4_num_lote')?.value  || '';
+  const georef = [cem, sector, manz, lote].filter(Boolean).join('-');
+  const ref = document.getElementById('f4_georeferencia');
+  if (ref) ref.value = georef;
+  // Actualizar georeferencia en todas las tarjetas de difuntos
+  document.querySelectorAll('.difunto-georef-display').forEach(el => { el.textContent = georef || '—'; });
+  // Actualizar número de nicho en todos los difuntos
+  document.querySelectorAll('.difunto-card').forEach(card => {
+    actualizarNichoEnCard(card, georef);
+  });
 }
 
+function actualizarNichoEnCard(card, georef) {
+  if (!georef) georef = document.getElementById('f4_georeferencia')?.value || '';
+  const terminal = card.querySelector('.d-terminal-hidden')?.value || '';
+  const posicion = card.querySelector('.d-posicion')?.value || '';
+  const nichoEl  = card.querySelector('.d-numero-nicho');
+  if (nichoEl) nichoEl.value = [georef, terminal, posicion].filter(Boolean).join('-');
+}
+
+function setTerminalDifunto(val, btn, card) {
+  card.querySelector('.d-terminal-hidden').value = val;
+  card.querySelectorAll('.d-terminal-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  actualizarNichoEnCard(card);
+}
+
+function setEstadoDifunto(val, btn, card) {
+  card.querySelector('.d-estado-hidden').value = val;
+  card.querySelectorAll('.d-estado-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function agregarDifunto() {
+  difuntosCount++;
+  const idx = difuntosCount;
+  const georef = document.getElementById('f4_georeferencia')?.value || '';
+  const today = new Date().toISOString().split('T')[0];
+
+  const card = document.createElement('div');
+  card.className = 'difunto-card';
+  card.dataset.idx = idx;
+  card.innerHTML = `
+    <div class="difunto-card-header">
+      <span style="font-weight:700;color:var(--navy)">⚰️ Difunto #${idx}</span>
+      <button onclick="eliminarDifunto(this)" style="background:#fee2e2;color:var(--danger);border:none;padding:6px 10px;border-radius:8px;cursor:pointer;font-size:13px;">✕ Eliminar</button>
+    </div>
+    <div class="fields-grid" style="margin-top:12px;">
+
+      <div class="field-group full">
+        <label>Georeferencia del Lote</label>
+        <div style="background:#f0f7ff;border:1.5px solid #bee3f8;border-radius:10px;padding:10px 13px;font-size:14px;font-weight:600;color:var(--navy)" class="difunto-georef-display">${georef || '—'}</div>
+      </div>
+
+      <div class="field-group full">
+        <label>Estado del Nicho *</label>
+        <input type="hidden" class="d-estado-hidden" value="">
+        <div class="toggle-group">
+          <button class="toggle-btn d-estado-btn" onclick="setEstadoDifunto('OCUPADO',this,this.closest('.difunto-card'))">OCUPADO</button>
+          <button class="toggle-btn d-estado-btn" onclick="setEstadoDifunto('VACÍO',this,this.closest('.difunto-card'))">VACÍO</button>
+        </div>
+      </div>
+
+      <div class="field-group full">
+        <label>Terminal del Nicho *</label>
+        <input type="hidden" class="d-terminal-hidden" value="">
+        <div class="toggle-group" style="flex-wrap:wrap;gap:6px;">
+          ${['A','B','C','D','E','F','G','H','I','J','K'].map(l=>`
+            <button class="toggle-btn d-terminal-btn" style="flex:0 0 calc(20% - 6px)"
+              onclick="setTerminalDifunto('${l}',this,this.closest('.difunto-card'));actualizarNichoEnCard(this.closest('.difunto-card'))">${l}</button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Posición *</label>
+        <select class="d-posicion" onchange="actualizarNichoEnCard(this.closest('.difunto-card'))">
+          <option value="">Selecciona...</option>
+          ${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option>${n}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label>Número de Nicho</label>
+        <input type="text" class="d-numero-nicho" readonly placeholder="Auto-generado" style="background:#f0f7ff;color:var(--navy);font-weight:600;">
+      </div>
+
+    </div>
+  `;
+
+  document.getElementById('difuntos-container').appendChild(card);
+  card.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+function eliminarDifunto(btn) {
+  const card = btn.closest('.difunto-card');
+  if (card) card.remove();
+}
+
+function submitForm4() {
+  const btn = document.querySelector('#view-form4 .btn-submit');
+  if (btn && btn.classList.contains('processing')) return;
+
+  // Validar campos requeridos de la bóveda
+  const required = REQUIRED[4];
+  let valid = true, firstErr = null;
+  document.querySelectorAll('#view-form4 .error').forEach(el => el.classList.remove('error'));
+  required.forEach(function(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!el.value.trim()) { el.classList.add('error'); valid=false; if(!firstErr) firstErr=el; }
+  });
+
+  // Validar que cada difunto tenga estado, terminal y posición
+  const cards = document.querySelectorAll('.difunto-card');
+  cards.forEach(function(card) {
+    const estado   = card.querySelector('.d-estado-hidden').value;
+    const terminal = card.querySelector('.d-terminal-hidden').value;
+    const posicion = card.querySelector('.d-posicion').value;
+    if (!estado || !terminal || !posicion) {
+      valid = false;
+      if (!firstErr) firstErr = card;
+      card.style.border = '2px solid var(--danger)';
+    } else {
+      card.style.border = '';
+    }
+  });
+
+  if (!valid) {
+    showToast('⚠️ Completa todos los campos requeridos');
+    if (firstErr) firstErr.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+
+  if (btn) { btn.classList.add('processing'); btn.textContent='✅ Guardando...'; btn.style.opacity='0.7'; }
+
+  // Datos base de la bóveda
+  const baseData = {
+    formId: 4, sheet: FORMS[4].sheet, formName: FORMS[4].name,
+    userId: currentUser.id, userName: currentUser.nombre,
+    status: 'pending', fecha: new Date().toISOString(),
+  };
+  // Recopilar todos los inputs del form4 (solo los de la bóveda, no los de difuntos)
+  document.querySelectorAll('#view-form4 > div > input, #view-form4 > div > select, #view-form4 > div > textarea, #view-form4 .form-scroll > .fields-grid input, #view-form4 .form-scroll > .fields-grid select, #view-form4 .form-scroll > .fields-grid textarea').forEach(function(el) {
+    if (!el.id || el.type==='file') return;
+    baseData[el.id.replace('f4_','')]  = el.value || '';
+  });
+  // Captura directa de los campos clave de la bóveda
+  ['cementerio','sector','manzana','num_lote','georeferencia','nombre_cementerio','status_lote',
+   'nombre_boveda','cant_nichos','cant_niveles','materiales','condiciones','fecha','levantado_por',
+   'lat','lng','maps_url','photo_data'].forEach(function(k) {
+    const el = document.getElementById('f4_'+k);
+    if (el) baseData[k] = el.value || '';
+  });
+
+  const photoData = baseData.photo_data || '';
+
+  // Si no hay difuntos, guardar solo la bóveda
+  if (cards.length === 0) {
+    baseData.localId = Date.now();
+    guardarRegistro4(baseData, photoData);
+  } else {
+    // Guardar un registro por cada difunto (con datos de bóveda incluidos)
+    cards.forEach(function(card, i) {
+      const difData = Object.assign({}, baseData);
+      difData.localId = Date.now() + i;
+      difData.difunto_num      = i + 1;
+      difData.estado_nicho     = card.querySelector('.d-estado-hidden').value;
+      difData.terminal_nicho   = card.querySelector('.d-terminal-hidden').value;
+      difData.posicion         = card.querySelector('.d-posicion').value;
+      difData.numero_nicho     = card.querySelector('.d-numero-nicho').value;
+      guardarRegistro4(difData, i === 0 ? photoData : ''); // foto solo en el primero
+    });
+  }
+
+  if (btn) { btn.classList.remove('processing'); btn.textContent='💾 Guardar registro'; btn.style.opacity='1'; }
+  resetForm4();
+  updatePending();
+  const total = cards.length || 1;
+  showOkModal('✅ Guardado', `${total} registro(s) guardado(s). ${isOnline ? 'Enviando a Sheets...' : 'Se sincronizarán al conectarse.'}`);
+}
+
+function guardarRegistro4(data, photoData) {
+  try {
+    const localData = Object.assign({}, data);
+    delete localData.photo_data;
+    localData.tiene_foto = photoData ? 'Si' : 'No';
+    const cache = JSON.parse(localStorage.getItem('registros_cache')||'[]');
+    cache.push(localData);
+    localStorage.setItem('registros_cache', JSON.stringify(cache));
+  } catch(e) { console.warn('localStorage:', e); }
+
+  if (photoData) guardarFotoLocal(data.localId, photoData);
+
+  if (isOnline) {
+    const sendData = Object.assign({}, data);
+    sendData.photo_data = photoData;
+    window.setTimeout(function() {
+      sendToSheets(sendData)
+        .then(function() { updateCacheStatus(data.localId, 'synced'); if(photoData) borrarFotoLocal(data.localId); })
+        .catch(function() {});
+    }, 800);
+  }
+}
+
+function resetForm4() {
+  // Reset inputs de bóveda
+  document.querySelectorAll('#view-form4 input, #view-form4 select, #view-form4 textarea').forEach(function(el) {
+    if (el.type==='file') return;
+    el.value=''; el.classList.remove('error');
+  });
+  // Reset foto
+  const prev = document.getElementById('f4_photo_preview');
+  if (prev) { prev.style.display='none'; prev.src=''; }
+  const ph = document.getElementById('f4_photo_ph');
+  if (ph) ph.style.display='flex';
+  // Reset GPS
+  const gps = document.getElementById('f4_gps_coords');
+  if (gps) gps.textContent='Sin ubicación capturada';
+  // Reset toggles
+  document.querySelectorAll('#view-form4 .toggle-btn').forEach(b => b.classList.remove('active'));
+  // Reset contadores
+  ['f4_cant_nichos','f4_cant_niveles'].forEach(id => { const el=document.getElementById(id); if(el) el.value='0'; });
+  // Limpiar difuntos
+  document.getElementById('difuntos-container').innerHTML = '';
+  difuntosCount = 0;
+  // Fecha y levantado por
+  setTodayDates(); prefillLevantadoPor();
+}
+
+function incrementar(id, delta) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.value = Math.max(0, (parseInt(el.value) || 0) + delta);
+}
+
+/* ============================================================
+   RESET FORMS 1, 2, 3
+   ============================================================ */
 function resetForm(formId) {
   document.querySelectorAll('#view-form'+formId+' input, #view-form'+formId+' select, #view-form'+formId+' textarea').forEach(function(el) {
     if (el.type==='file') return;
@@ -412,18 +647,6 @@ function resetForm(formId) {
     if (tog) { tog.querySelectorAll('.toggle-btn').forEach((b,i)=>b.classList.toggle('active',i===0)); }
     const pub=document.getElementById('f1_publicidad'); if(pub) pub.value='No';
     const pubf=document.getElementById('f1_pub_fields'); if(pubf) pubf.style.display='none';
-  }
-  if (formId===4) {
-    const gr = document.getElementById('f4_georeferencia');
-    if (gr) gr.value = '';
-    document.querySelectorAll('#view-form4 .toggle-btn').forEach(b => b.classList.remove('active'));
-    ['f4_cant_nichos','f4_cant_niveles'].forEach(id => { const el=document.getElementById(id); if(el) el.value='0'; });
-    ['f4_lat','f4_lng','f4_maps_url'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
-  }
-  if (formId===5) {
-    const nn = document.getElementById('f5_numero_nicho');
-    if (nn) nn.value = '';
-    document.querySelectorAll('#view-form5 .toggle-btn').forEach(b => b.classList.remove('active'));
   }
   setTodayDates(); prefillLevantadoPor();
 }
@@ -467,6 +690,14 @@ async function syncAll() {
   updatePending();
 }
 
+function updateCacheStatus(localId, status) {
+  try {
+    const cache = JSON.parse(localStorage.getItem('registros_cache')||'[]');
+    const idx = cache.findIndex(r => r.localId===localId);
+    if (idx>=0) { cache[idx].status=status; localStorage.setItem('registros_cache',JSON.stringify(cache)); }
+  } catch(e) {}
+}
+
 function updatePending() {
   try {
     const cache = JSON.parse(localStorage.getItem('registros_cache')||'[]');
@@ -497,9 +728,10 @@ function renderHistory() {
     const sc={pending:'s-pending',synced:'s-synced',error:'s-error'}[r.status]||'s-pending';
     const sl={pending:'Pendiente',synced:'Sincronizado',error:'Error'}[r.status]||r.status;
     const date=r.fecha?new Date(r.fecha).toLocaleString('es-DO'):'—';
+    const sub = r.numero_nicho ? `Nicho: ${r.numero_nicho}` : (r.poligono||r.georeferencia||'—');
     return `<div class="h-card">
       <div class="h-card-top"><div class="h-card-name">${f.icon} ${f.name}</div><span class="status-pill ${sc}">${sl}</span></div>
-      <div class="h-card-meta"><span>👤 ${r.nombres||r.nombre||r.nombre_boveda||'—'}</span><span>📅 ${date}</span><span>📌 ${r.poligono||r.georeferencia||'—'}</span></div>
+      <div class="h-card-meta"><span>🏛️ ${r.nombre_boveda||r.nombres||r.nombre||'—'}</span><span>📅 ${date}</span><span>📌 ${sub}</span></div>
     </div>`;
   }).join('');
 }
@@ -520,7 +752,7 @@ function renderReports() {
     const date=r.fecha?new Date(r.fecha).toLocaleString('es-DO'):'—';
     const sc={pending:'s-pending',synced:'s-synced'}[r.status]||'';
     const sl={pending:'Pendiente',synced:'Sync'}[r.status]||r.status;
-    return `<tr><td>${f.name}</td><td>${r.nombres||r.nombre||r.nombre_boveda||'—'}</td><td>${r.userName||'—'}</td><td>${date}</td><td><span class="status-pill ${sc}">${sl}</span></td></tr>`;
+    return `<tr><td>${f.name}</td><td>${r.nombre_boveda||r.nombres||r.nombre||'—'}</td><td>${r.userName||'—'}</td><td>${date}</td><td><span class="status-pill ${sc}">${sl}</span></td></tr>`;
   }).join('');
   document.getElementById('report-table-wrap').innerHTML=`
     <table class="report-table">
@@ -664,7 +896,6 @@ function submitCustomForm(id) {
    RASTREO GPS
    ============================================================ */
 let rastreoActivo=false, rastreoWatchId=null, puntosRuta=[];
-
 function toggleRastreo() { rastreoActivo ? detenerRastreo() : iniciarRastreo(); }
 function iniciarRastreo() {
   if (!navigator.geolocation) { showToast('GPS no disponible'); return; }
@@ -675,10 +906,8 @@ function iniciarRastreo() {
   document.getElementById('btn-rastreo').className='btn-rastreo stop';
   rastreoWatchId=navigator.geolocation.watchPosition(
     function(pos) {
-      var lat=pos.coords.latitude.toFixed(6);
-      var lng=pos.coords.longitude.toFixed(6);
-      var prec=Math.round(pos.coords.accuracy);
-      var ahora=new Date();
+      var lat=pos.coords.latitude.toFixed(6); var lng=pos.coords.longitude.toFixed(6);
+      var prec=Math.round(pos.coords.accuracy); var ahora=new Date();
       document.getElementById('rs-lat').textContent=lat;
       document.getElementById('rs-lng').textContent=lng;
       document.getElementById('rs-precision').textContent=prec+' m';
@@ -700,8 +929,7 @@ function detenerRastreo() {
 }
 let mapaInit=false;
 function actualizarMapa(lat,lng) {
-  const iframe=document.getElementById('map-iframe');
-  const ph=document.getElementById('map-placeholder');
+  const iframe=document.getElementById('map-iframe'); const ph=document.getElementById('map-placeholder');
   const url='https://www.openstreetmap.org/export/embed.html?bbox='+(parseFloat(lng)-0.003)+','+(parseFloat(lat)-0.003)+','+(parseFloat(lng)+0.003)+','+(parseFloat(lat)+0.003)+'&layer=mapnik&marker='+lat+','+lng;
   if (!mapaInit) { ph.style.display='none'; iframe.style.display='block'; mapaInit=true; }
   iframe.src=url;
@@ -737,13 +965,12 @@ function filtrarConsulta() {
   if (uf) cache=cache.filter(r=>String(r.userId)===uf);
   if (fi) cache=cache.filter(r=>r.fecha&&r.fecha.split('T')[0]>=fi);
   if (fft) cache=cache.filter(r=>r.fecha&&r.fecha.split('T')[0]<=fft);
-  if (busq) cache=cache.filter(r=>[r.nombres,r.apellidos,r.nombre,r.cedula,r.rmc,r.userName,r.nombre_boveda,r.georeferencia].join(' ').toLowerCase().includes(busq));
+  if (busq) cache=cache.filter(r=>[r.nombres,r.apellidos,r.nombre,r.cedula,r.rmc,r.userName,r.nombre_boveda,r.georeferencia,r.numero_nicho].join(' ').toLowerCase().includes(busq));
   consultaResultados=[...cache].reverse();
   renderConsultaStats(); renderConsultaLista();
 }
 function renderConsultaStats() {
-  const t=consultaResultados.length;
-  document.getElementById('consulta-stats').innerHTML=`<div class="cstat">Total: ${t}</div>`;
+  document.getElementById('consulta-stats').innerHTML=`<div class="cstat">Total: ${consultaResultados.length}</div>`;
 }
 function renderConsultaLista() {
   const lista=document.getElementById('consulta-lista');
@@ -756,8 +983,8 @@ function renderConsultaLista() {
       <div class="consulta-card-top"><div class="consulta-card-name">${f.icon} ${nombre}</div><span style="font-size:11px;color:var(--muted)">${fecha}</span></div>
       <div class="consulta-card-badges">
         <span class="badge badge-form">${f.name}</span>
-        ${r.poligono?`<span class="badge badge-poli">Polígono ${r.poligono}`+`</span>`:''}
         ${r.georeferencia?`<span class="badge badge-poli">${r.georeferencia}</span>`:''}
+        ${r.numero_nicho?`<span class="badge badge-poli">Nicho: ${r.numero_nicho}</span>`:''}
         <span class="badge badge-user">👤 ${r.userName||'—'}</span>
       </div>
     </div>`;
@@ -770,42 +997,30 @@ function setConsultaView(tipo,btn) {
   document.getElementById('consulta-mapa').style.display=tipo==='mapa'?'block':'none';
   if (tipo==='mapa') renderConsultaMapa();
 }
-
 function renderConsultaMapa() {
-  const contenedor = document.getElementById('consulta-mapa');
-  const registros = consultaResultados.filter(function(r) { return r.lat && r.lng; });
-  if (!registros.length) { contenedor.innerHTML = '<div class="history-empty">📭 No hay registros con GPS para mostrar.</div>'; return; }
-  contenedor.innerHTML = '<div id="leaflet-map" style="width:100%;height:420px;border-radius:12px;margin:0 16px 16px;width:calc(100% - 32px);"></div>';
+  const contenedor=document.getElementById('consulta-mapa');
+  const registros=consultaResultados.filter(r=>r.lat&&r.lng);
+  if (!registros.length) { contenedor.innerHTML='<div class="history-empty">📭 No hay registros con GPS.</div>'; return; }
+  contenedor.innerHTML='<div id="leaflet-map" style="width:100%;height:420px;border-radius:12px;"></div>';
   function iniciarMapa() {
-    const L = window.L;
-    if (!L) { showToast('Error cargando el mapa'); return; }
-    const el = document.getElementById('leaflet-map');
-    if (!el) return;
-    if (el._leaflet_id) { el._leaflet_id = null; }
-    const lats = registros.map(function(r) { return parseFloat(r.lat); });
-    const lngs = registros.map(function(r) { return parseFloat(r.lng); });
-    const centerLat = (Math.min.apply(null,lats) + Math.max.apply(null,lats)) / 2;
-    const centerLng = (Math.min.apply(null,lngs) + Math.max.apply(null,lngs)) / 2;
-    const map = L.map('leaflet-map').setView([centerLat, centerLng], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(map);
-    registros.forEach(function(r) {
-      const lat = parseFloat(r.lat); const lng = parseFloat(r.lng);
-      const nombre = r.nombres ? (r.nombres+' '+(r.apellidos||'')).trim() : (r.nombre||r.nombre_boveda||'Sin nombre');
-      const form = FORMS[r.formId] ? FORMS[r.formId].name : (r.formName||'Formulario');
-      const fecha = r.fecha ? new Date(r.fecha).toLocaleDateString('es-DO') : '—';
-      const mapsUrl = 'https://maps.google.com/?q='+lat+','+lng;
-      const popup = '<b>'+nombre+'</b><br><i>'+form+'</i><br>Fecha: '+fecha+'<br><a href="'+mapsUrl+'" target="_blank" style="color:#0077b6;font-weight:600;">📍 Ver en Google Maps</a>';
-      L.marker([lat, lng]).addTo(map).bindPopup(popup);
+    const L=window.L; if(!L) return;
+    const el=document.getElementById('leaflet-map'); if(!el) return;
+    if (el._leaflet_id) el._leaflet_id=null;
+    const lats=registros.map(r=>parseFloat(r.lat)), lngs=registros.map(r=>parseFloat(r.lng));
+    const map=L.map('leaflet-map').setView([(Math.min(...lats)+Math.max(...lats))/2,(Math.min(...lngs)+Math.max(...lngs))/2],14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);
+    registros.forEach(r=>{
+      const nombre=r.nombre_boveda||r.nombres||(r.nombre||'Sin nombre');
+      const mapsUrl='https://maps.google.com/?q='+r.lat+','+r.lng;
+      L.marker([parseFloat(r.lat),parseFloat(r.lng)]).addTo(map)
+        .bindPopup('<b>'+nombre+'</b><br>'+new Date(r.fecha).toLocaleDateString('es-DO')+'<br><a href="'+mapsUrl+'" target="_blank">📍 Ver en Maps</a>');
     });
-    if (registros.length > 1) {
-      const bounds = L.latLngBounds(registros.map(function(r) { return [parseFloat(r.lat), parseFloat(r.lng)]; }));
-      map.fitBounds(bounds, { padding: [40, 40] });
-    }
+    if (registros.length>1) map.fitBounds(L.latLngBounds(registros.map(r=>[parseFloat(r.lat),parseFloat(r.lng)])),{padding:[40,40]});
   }
   if (!window.L) {
     if (!document.getElementById('leaflet-css')) { const css=document.createElement('link'); css.id='leaflet-css'; css.rel='stylesheet'; css.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(css); }
     const script=document.createElement('script'); script.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; script.onload=iniciarMapa; document.head.appendChild(script);
-  } else { iniciarMapa(); }
+  } else iniciarMapa();
 }
 function limpiarFiltros() {
   ['consulta-search','consulta-fecha-ini','consulta-fecha-fin'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -815,7 +1030,7 @@ function limpiarFiltros() {
 function verDetalle(idx) {
   const r=consultaResultados[idx]; if(!r) return;
   const f=FORMS[r.formId]||{icon:'📋',name:r.formName||'Formulario'};
-  const nombre=r.nombres?`${r.nombres} ${r.apellidos||''}`.trim():(r.nombre||r.nombre_boveda||'—');
+  const nombre=r.nombre_boveda||r.nombres||(r.nombre||'—');
   const fecha=r.fecha?new Date(r.fecha).toLocaleString('es-DO'):'—';
   const sc={pending:'s-pending',synced:'s-synced'}[r.status]||'s-pending';
   const sl={pending:'Pendiente',synced:'Sincronizado'}[r.status]||r.status;
@@ -836,7 +1051,7 @@ function verDetalle(idx) {
 function updateOnlineStatus() {
   isOnline=navigator.onLine;
   const dot=document.getElementById('online-dot');
-  if (dot) { dot.className='online-dot '+(isOnline?'online':'offline'); }
+  if (dot) dot.className='online-dot '+(isOnline?'online':'offline');
   if (isOnline) syncAll();
 }
 window.addEventListener('online', updateOnlineStatus);
@@ -855,32 +1070,6 @@ function showOkModal(title,msg) {
   document.getElementById('modal-ok').style.display='flex';
 }
 function closeOkModal() { document.getElementById('modal-ok').style.display='none'; showView('home'); }
-
-/* ============================================================
-   FORMULARIOS 4 Y 5 — Funciones específicas
-   ============================================================ */
-function incrementar(id, delta) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.value = Math.max(0, (parseInt(el.value) || 0) + delta);
-}
-
-function actualizarGeoreferencia4() {
-  const cem    = document.getElementById('f4_cementerio')?.value || '';
-  const sector = document.getElementById('f4_sector')?.value    || '';
-  const manz   = document.getElementById('f4_manzana')?.value   || '';
-  const lote   = document.getElementById('f4_num_lote')?.value  || '';
-  const ref    = document.getElementById('f4_georeferencia');
-  if (ref) ref.value = [cem, sector, manz, lote].filter(Boolean).join('-');
-}
-
-function actualizarNumeroNicho5() {
-  const geo      = document.getElementById('f5_georeferencia_base')?.value || '';
-  const terminal = document.getElementById('f5_terminal_nicho')?.value     || '';
-  const posicion = document.getElementById('f5_posicion')?.value           || '';
-  const ref      = document.getElementById('f5_numero_nicho');
-  if (ref) ref.value = [geo, terminal, posicion].filter(Boolean).join('-');
-}
 
 /* ============================================================
    INIT
