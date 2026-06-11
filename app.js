@@ -988,31 +988,31 @@ function agregarNicho() {
       '<div class="nicho-fields">' +
         '<div class="field-group full"><label>Estado del Nicho *</label>' +
           '<div class="toggle-group-wrap">' +
-            '<button class="toggle-btn-sm" onclick="setNichoEstado(' + idx + ',this,&quot;OCUPADO&quot;)">OCUPADO</button>' +
-            '<button class="toggle-btn-sm" onclick="setNichoEstado(' + idx + ',this,&quot;VACÍO&quot;)">VACÍO</button>' +
+            '<button class="toggle-btn-sm" onclick="setNichoToggle(' + idx + ','estado','OCUPADO',this)">OCUPADO</button>' +
+            '<button class="toggle-btn-sm" onclick="setNichoToggle(' + idx + ','estado','VACÍO',this)">VACÍO</button>' +
           '</div>' +
         '</div>' +
         '<div class="field-group full"><label>Terminal del Nicho *</label>' +
           '<div class="toggle-group-wrap">' +
             terminales.map(function(l) {
-              return '<button class="toggle-btn-sm" onclick="setNichoTerminal(' + idx + ',this,&quot;' + l + '&quot;)">' + l + '</button>';
+              return '<button class="toggle-btn-sm" onclick="setNichoToggle(' + idx + ','terminal','' + l + '',this);actualizarCodigoNicho(' + idx + ')">' + l + '</button>';
             }).join('') +
           '</div>' +
         '</div>' +
         '<div class="field-group"><label>Posición *</label>' +
-          '<select id="nicho-posicion-' + idx + '" onchange="setNichoPosicion(' + idx + ',this.value)">' +
+          '<select id="nicho-posicion-' + idx + '" onchange="setNichoVal(' + idx + ','posicion',this.value);actualizarCodigoNicho(' + idx + ')">' +
             '<option value="">Pos...</option>' +
             [1,2,3,4,5,6,7,8,9,10].map(function(n){return '<option>'+n+'</option>';}).join('') +
           '</select>' +
         '</div>' +
         '<div class="field-group"><label>Nombre del Difunto</label>' +
-          '<input type="text" id="nicho-nombre-' + idx + '" placeholder="Nombre (dejar vacío si no hay)" oninput="setNichoNombre(' + idx + ',this.value)">' +
+          '<input type="text" id="nicho-nombre-' + idx + '" placeholder="Nombre (dejar vacío si no hay)" oninput="setNichoVal(' + idx + ','nombre',this.value)">' +
         '</div>' +
         '<div class="field-group"><label>Fecha de Fallecimiento</label>' +
-          '<input type="date" id="nicho-fecha-' + idx + '" onchange="setNichoFecha(' + idx + ',this.value)">' +
+          '<input type="date" id="nicho-fecha-' + idx + '" onchange="setNichoVal(' + idx + ','fecha_fallecimiento',this.value)">' +
         '</div>' +
         '<div class="field-group"><label>Edad al fallecer</label>' +
-          '<input type="number" id="nicho-edad-' + idx + '" placeholder="Años" min="0" inputmode="numeric" oninput="setNichoEdad(' + idx + ',this.value)">' +
+          '<input type="number" id="nicho-edad-' + idx + '" placeholder="Años" min="0" inputmode="numeric" oninput="setNichoVal(' + idx + ','edad',this.value)">' +
         '</div>' +
         '<div class="field-group full"><label>Foto del nicho</label>' +
           '<div class="photo-box">' +
@@ -1028,7 +1028,7 @@ function agregarNicho() {
           '<input type="hidden" id="nicho-photo-' + idx + '">' +
         '</div>' +
         '<div class="field-group full"><label>Observaciones</label>' +
-          '<textarea id="nicho-obs-' + idx + '" rows="2" placeholder="Observaciones..." oninput="setNichoObs(' + idx + ',this.value)"></textarea>' +
+          '<textarea id="nicho-obs-' + idx + '" rows="2" placeholder="Observaciones..." oninput="setNichoVal(' + idx + ','observaciones',this.value)"></textarea>' +
         '</div>' +
       '</div>' +
     '</div>';
@@ -1050,34 +1050,6 @@ function setNichoToggle(idx, campo, valor, btn) {
   btn.classList.add('active');
   if (campo === 'terminal') actualizarCodigoNicho(idx);
 }
-
-// Funciones helper para evitar comillas dentro de strings HTML
-function setNichoEstado(idx, btn, valor) {
-  setNichoVal(idx, 'estado', valor);
-  btn.closest('.toggle-group-wrap').querySelectorAll('.toggle-btn-sm').forEach(function(b) { b.classList.remove('active'); });
-  btn.classList.add('active');
-  // Si es VACÍO, poner VACÍO en nombre automáticamente
-  const nombreEl = document.getElementById('nicho-nombre-'+idx);
-  if (nombreEl && valor === 'VACÍO' && !nombreEl.value) nombreEl.value = 'VACÍO';
-  if (nombreEl && valor === 'OCUPADO' && nombreEl.value === 'VACÍO') nombreEl.value = '';
-}
-
-function setNichoTerminal(idx, btn, valor) {
-  setNichoVal(idx, 'terminal', valor);
-  btn.closest('.toggle-group-wrap').querySelectorAll('.toggle-btn-sm').forEach(function(b) { b.classList.remove('active'); });
-  btn.classList.add('active');
-  actualizarCodigoNicho(idx);
-}
-
-function setNichoPosicion(idx, valor) {
-  setNichoVal(idx, 'posicion', valor);
-  actualizarCodigoNicho(idx);
-}
-
-function setNichoNombre(idx, valor) { setNichoVal(idx, 'nombre', valor); }
-function setNichoFecha(idx, valor)  { setNichoVal(idx, 'fecha_fallecimiento', valor); }
-function setNichoEdad(idx, valor)   { setNichoVal(idx, 'edad', valor); }
-function setNichoObs(idx, valor)    { setNichoVal(idx, 'observaciones', valor); }
 
 function setNichoVal(idx, campo, valor) {
   const nicho = nichosData.find(function(n) { return n.idx === idx; });
@@ -1194,5 +1166,626 @@ function submitFormCementerio() {
   resetForm(4);
 }
 
+/* ============================================================
+   FORMULARIO 4 — CEMENTERIO: LÓGICA DE DIFUNTOS DINÁMICOS
+   ============================================================ */
+let contadorDifuntos = 0;
 
+// Agrega un bloque de difunto al formulario
+function agregarDifunto() {
+  contadorDifuntos++;
+  const idx = contadorDifuntos;
+  const geo = document.getElementById('f4_georeferencia')?.value || '';
+
+  const div = document.createElement('div');
+  div.className = 'difunto-card';
+  div.id = 'difunto-' + idx;
+  div.innerHTML = `
+    <div class="difunto-card-header">
+      <div style="font-weight:700;color:var(--navy);font-size:14px;">⚰️ Nicho #${idx}</div>
+      ${idx > 1 ? `<button onclick="eliminarDifunto(${idx})" style="background:#fee2e2;border:none;color:var(--danger);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px;">✕ Eliminar</button>` : ''}
+    </div>
+    <div class="fields-grid">
+      <div class="field-group full">
+        <label>Estado del Nicho *</label>
+        <input type="hidden" id="d${idx}_estado" value="">
+        <div class="toggle-group">
+          <button class="toggle-btn" onclick="setToggleDifunto(${idx},'estado','OCUPADO',this);toggleCamposDifunto(${idx})">OCUPADO</button>
+          <button class="toggle-btn" onclick="setToggleDifunto(${idx},'estado','VACÍO',this);toggleCamposDifunto(${idx})">VACÍO</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Terminal del Nicho *</label>
+        <input type="hidden" id="d${idx}_terminal" value="">
+        <div class="toggle-group" style="flex-wrap:wrap;gap:5px;">
+          ${['A','B','C','D','E','F','G','H','I','J','K'].map(l =>
+            `<button class="toggle-btn" style="flex:0 0 calc(20% - 5px);padding:8px 4px;font-size:13px;"
+              onclick="setToggleDifunto(${idx},'terminal','${l}',this);actualizarCodigoNicho(${idx})">${l}</button>`
+          ).join('')}
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Posición *</label>
+        <select id="d${idx}_posicion" onchange="actualizarCodigoNicho(${idx})">
+          <option value="">Selecciona...</option>
+          ${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}">${n}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="field-group full">
+        <label>Código del Nicho (automático)</label>
+        <input type="text" id="d${idx}_codigo_nicho" readonly
+          style="background:#f0f7ff;color:var(--navy);font-weight:700;font-size:15px;letter-spacing:0.05em;"
+          placeholder="Se genera automáticamente">
+      </div>
+
+      <!-- Campos solo para OCUPADO -->
+      <div id="d${idx}_campos_ocupado" style="display:none;grid-column:1/-1;">
+        <div class="fields-grid">
+          <div class="field-group full"><label>Nombre del Difunto</label><input type="text" id="d${idx}_nombre" placeholder="Nombre completo"></div>
+          <div class="field-group"><label>Fecha de Fallecimiento</label><input type="date" id="d${idx}_fecha_fallecimiento"></div>
+          <div class="field-group"><label>Edad al Fallecer</label><input type="number" id="d${idx}_edad" placeholder="Años" min="0" inputmode="numeric"></div>
+          <div class="field-group full"><label>Observaciones</label><textarea id="d${idx}_observaciones" rows="2" placeholder="Observaciones del difunto..."></textarea></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('difuntos-container').appendChild(div);
+
+  // Si hay georeferencia base, actualizar código
+  if (geo) actualizarCodigoNicho(idx);
+}
+
+// Elimina un bloque de difunto
+function eliminarDifunto(idx) {
+  const el = document.getElementById('difunto-' + idx);
+  if (el) el.remove();
+}
+
+// Toggle específico para difuntos (sin afectar toggles globales)
+function setToggleDifunto(idx, campo, val, btn) {
+  document.getElementById('d' + idx + '_' + campo).value = val;
+  btn.closest('.toggle-group').querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// Mostrar/ocultar campos según estado OCUPADO/VACÍO
+function toggleCamposDifunto(idx) {
+  const estado = document.getElementById('d' + idx + '_estado').value;
+  const campos = document.getElementById('d' + idx + '_campos_ocupado');
+  if (campos) campos.style.display = estado === 'OCUPADO' ? 'block' : 'none';
+}
+
+// Genera el código del nicho automáticamente
+function actualizarCodigoNicho(idx) {
+  const geo      = document.getElementById('f4_georeferencia')?.value || '';
+  const terminal = document.getElementById('d' + idx + '_terminal')?.value || '';
+  const posicion = document.getElementById('d' + idx + '_posicion')?.value || '';
+  const codigo   = document.getElementById('d' + idx + '_codigo_nicho');
+  if (codigo) {
+    const partes = [geo, terminal, posicion].filter(Boolean);
+    codigo.value = partes.join('-');
+  }
+}
+
+// Actualiza todos los códigos cuando cambia la georeferencia
+function actualizarGeoreferencia4() {
+  const cem    = document.getElementById('f4_cementerio')?.value  || '';
+  const sector = document.getElementById('f4_sector')?.value      || '';
+  const manz   = document.getElementById('f4_manzana')?.value     || '';
+  const lote   = document.getElementById('f4_num_lote')?.value    || '';
+  const ref    = document.getElementById('f4_georeferencia');
+  if (ref) ref.value = [cem, sector, manz, lote].filter(Boolean).join('-');
+  // Actualizar código de todos los nichos existentes
+  for (let i = 1; i <= contadorDifuntos; i++) {
+    if (document.getElementById('difunto-' + i)) actualizarCodigoNicho(i);
+  }
+}
+
+// Guardar bóveda + cada difunto como registro separado
+function submitForm4() {
+  const btn = document.querySelector('#view-form4 .btn-submit');
+  if (btn && btn.classList.contains('processing')) return;
+
+  // Validar campos obligatorios de la bóveda
+  const reqBoveda = ['f4_cementerio','f4_sector','f4_manzana','f4_num_lote',
+    'f4_nombre_cementerio','f4_status_lote','f4_nombre_boveda',
+    'f4_materiales','f4_condiciones','f4_fecha','f4_levantado_por'];
+
+  let valid = true, firstErr = null;
+  document.querySelectorAll('#view-form4 .error').forEach(el => el.classList.remove('error'));
+
+  reqBoveda.forEach(function(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!el.value.trim()) {
+      el.classList.add('error'); valid = false;
+      if (!firstErr) firstErr = el;
+    }
+  });
+
+  if (!valid) {
+    showToast('⚠️ Completa los campos obligatorios de la bóveda');
+    if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  // Verificar que haya al menos 1 nicho
+  const nichoCards = document.querySelectorAll('#difuntos-container .difunto-card');
+  if (!nichoCards.length) {
+    showToast('⚠️ Agrega al menos un nicho con el botón ➕');
+    return;
+  }
+
+  // Recopilar datos de la bóveda (comunes a todos los registros)
+  const photoData = document.getElementById('f4_photo_data')?.value || '';
+  const dataBoveda = {
+    formId: 4,
+    sheet: 'Cementerios_Bovedas',
+    formName: 'Cementerios y Bóvedas',
+    userId: currentUser.id,
+    userName: currentUser.nombre,
+    lat:              document.getElementById('f4_lat')?.value || '',
+    lng:              document.getElementById('f4_lng')?.value || '',
+    maps_url:         document.getElementById('f4_maps_url')?.value || '',
+    cementerio:       document.getElementById('f4_cementerio')?.value || '',
+    sector:           document.getElementById('f4_sector')?.value || '',
+    manzana:          document.getElementById('f4_manzana')?.value || '',
+    num_lote:         document.getElementById('f4_num_lote')?.value || '',
+    georeferencia:    document.getElementById('f4_georeferencia')?.value || '',
+    nombre_cementerio:document.getElementById('f4_nombre_cementerio')?.value || '',
+    status_lote:      document.getElementById('f4_status_lote')?.value || '',
+    nombre_boveda:    document.getElementById('f4_nombre_boveda')?.value || '',
+    cant_nichos:      document.getElementById('f4_cant_nichos')?.value || '0',
+    cant_niveles:     document.getElementById('f4_cant_niveles')?.value || '0',
+    materiales:       document.getElementById('f4_materiales')?.value || '',
+    condiciones:      document.getElementById('f4_condiciones')?.value || '',
+    fecha:            document.getElementById('f4_fecha')?.value || '',
+    levantado_por:    document.getElementById('f4_levantado_por')?.value || '',
+  };
+
+  // Bloquear botón
+  if (btn) { btn.classList.add('processing'); btn.textContent = '✅ Guardando...'; btn.style.opacity = '0.7'; }
+
+  // Crear un registro por cada nicho
+  let registrosGuardados = 0;
+  const cache = JSON.parse(localStorage.getItem('registros_cache') || '[]');
+
+  nichoCards.forEach(function(card) {
+    const idx = card.id.replace('difunto-', '');
+    const estado    = document.getElementById('d' + idx + '_estado')?.value    || '';
+    const terminal  = document.getElementById('d' + idx + '_terminal')?.value  || '';
+    const posicion  = document.getElementById('d' + idx + '_posicion')?.value  || '';
+    const codigo    = document.getElementById('d' + idx + '_codigo_nicho')?.value || '';
+    const nombre    = document.getElementById('d' + idx + '_nombre')?.value    || '';
+    const fFallec   = document.getElementById('d' + idx + '_fecha_fallecimiento')?.value || '';
+    const edad      = document.getElementById('d' + idx + '_edad')?.value      || '';
+    const obs       = document.getElementById('d' + idx + '_observaciones')?.value || '';
+
+    // Combinar datos de la bóveda + datos del nicho
+    const registro = Object.assign({}, dataBoveda, {
+      localId:              Date.now() + registrosGuardados,
+      status:               'pending',
+      fecha_registro:       new Date().toISOString(),
+      // Datos del nicho
+      estado_nicho:         estado,
+      terminal_nicho:       terminal,
+      posicion_nicho:       posicion,
+      codigo_nicho:         codigo,   // código único: CEM-SECTOR-MAN-LOTE-TERMINAL-POS
+      nombre_difunto:       nombre,
+      fecha_fallecimiento:  fFallec,
+      edad_difunto:         edad,
+      observaciones_nicho:  obs,
+      tiene_foto:           photoData ? 'Si' : 'No',
+    });
+
+    cache.push(registro);
+
+    // Guardar foto solo en el primer registro (no duplicar)
+    if (registrosGuardados === 0 && photoData) {
+      guardarFotoLocal(registro.localId, photoData);
+    }
+
+    registrosGuardados++;
+  });
+
+  // Guardar cache
+  try {
+    localStorage.setItem('registros_cache', JSON.stringify(cache));
+  } catch(e) {
+    console.warn('localStorage lleno:', e);
+  }
+
+  // Rehabilitar botón
+  if (btn) { btn.classList.remove('processing'); btn.textContent = '💾 Guardar registro'; btn.style.opacity = '1'; }
+
+  // Limpiar formulario
+  resetFormCementerio();
+  updatePending();
+
+  showOkModal(
+    '✅ ' + registrosGuardados + ' nicho(s) guardados',
+    isOnline
+      ? 'Se creó un registro por cada nicho. Sincronizando en segundo plano...'
+      : 'Sin internet. Se sincronizarán al conectarse.'
+  );
+
+  // Enviar cada registro al servidor en segundo plano
+  if (isOnline) {
+    const pendientes = cache.filter(r => r.status === 'pending' && r.formId === 4);
+    pendientes.forEach(function(r, i) {
+      window.setTimeout(function() {
+        const dataConFoto = Object.assign({}, r);
+        if (i === 0) {
+          obtenerFotoLocal(r.localId).then(function(foto) {
+            if (foto) dataConFoto.photo_data = foto;
+            sendToSheets(dataConFoto)
+              .then(function() { updateCacheStatus(r.localId, 'synced'); if (foto) borrarFotoLocal(r.localId); })
+              .catch(function() {});
+          });
+        } else {
+          sendToSheets(dataConFoto)
+            .then(function() { updateCacheStatus(r.localId, 'synced'); })
+            .catch(function() {});
+        }
+      }, 800 + (i * 300));
+    });
+  }
+}
+
+// Resetear formulario completo de cementerio
+function resetFormCementerio() {
+  // Limpiar campos de la bóveda
+  ['f4_cementerio','f4_sector','f4_manzana','f4_num_lote','f4_georeferencia',
+   'f4_nombre_boveda','f4_cant_nichos','f4_cant_niveles',
+   'f4_materiales','f4_condiciones','f4_nombre_cementerio','f4_status_lote',
+   'f4_lat','f4_lng','f4_maps_url','f4_photo_data','f4_fecha','f4_levantado_por'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) { el.value = el.id.includes('cant') ? '0' : ''; el.classList.remove('error'); }
+  });
+
+  // Reset foto
+  const prev = document.getElementById('f4_photo_preview');
+  if (prev) { prev.style.display = 'none'; prev.src = ''; }
+  const ph = document.getElementById('f4_photo_ph');
+  if (ph) ph.style.display = 'flex';
+
+  // Reset GPS
+  const gps = document.getElementById('f4_gps_coords');
+  if (gps) gps.textContent = 'Sin ubicación capturada';
+
+  // Reset toggles
+  document.querySelectorAll('#view-form4 .toggle-btn').forEach(b => b.classList.remove('active'));
+
+  // Limpiar difuntos
+  document.getElementById('difuntos-container').innerHTML = '';
+  contadorDifuntos = 0;
+
+  // Fecha y levantado por
+  const today = new Date().toISOString().split('T')[0];
+  const fechaEl = document.getElementById('f4_fecha');
+  if (fechaEl) fechaEl.value = today;
+  const levEl = document.getElementById('f4_levantado_por');
+  if (levEl && currentUser) levEl.value = currentUser.nombre;
+
+  // Agregar un nicho vacío por defecto
+  agregarDifunto();
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init() {
+  updateOnlineStatus();
+  if (restoreSession()) { startApp(); }
+  else { document.getElementById('screen-login').style.display='flex'; document.getElementById('screen-app').style.display='none'; }
+  document.getElementById('login-pass')?.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  document.getElementById('login-user')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('login-pass').focus();});
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(function(reg) {
+      reg.addEventListener('updatefound',function() {
+        const nuevo=reg.installing;
+        nuevo.addEventListener('statechange',function() {
+          if (nuevo.state==='installed'&&navigator.serviceWorker.controller) {
+            nuevo.postMessage('SKIP_WAITING');
+            showToast('🔄 Actualizando app...');
+            setTimeout(()=>window.location.reload(),1500);
+          }
+        });
+      });
+      reg.update();
+    }).catch(()=>{});
+    navigator.serviceWorker.addEventListener('controllerchange',()=>window.location.reload());
+  }
+}
 init();
+
+/* ============================================================
+   FORMULARIO 4 — CEMENTERIO: BÓVEDA + DIFUNTOS DINÁMICOS
+   ============================================================ */
+let contadorDifuntos = 0;
+
+// Agrega un bloque de difunto al formulario
+function agregarDifunto() {
+  contadorDifuntos++;
+  const idx = contadorDifuntos;
+  const georef = document.getElementById('f4_georeferencia')?.value || '';
+
+  const div = document.createElement('div');
+  div.className = 'difunto-card';
+  div.id = 'difunto-' + idx;
+  div.innerHTML = `
+    <div class="difunto-card-header">
+      <div style="font-weight:700;color:var(--navy);font-size:14px;">⚰️ Difunto / Nicho #${idx}</div>
+      ${idx > 1 ? `<button onclick="eliminarDifunto(${idx})" style="background:#fee2e2;border:none;color:var(--danger);padding:4px 10px;border-radius:8px;font-size:12px;cursor:pointer;">✕ Eliminar</button>` : ''}
+    </div>
+    <div class="fields-grid">
+
+      <div class="field-group full">
+        <label>Estado del Nicho *</label>
+        <input type="hidden" id="d${idx}_estado" value="">
+        <div class="toggle-group">
+          <button class="toggle-btn" onclick="setDifuntoToggle(${idx},'estado','OCUPADO',this)">OCUPADO</button>
+          <button class="toggle-btn" onclick="setDifuntoToggle(${idx},'estado','VACÍO',this)">VACÍO</button>
+        </div>
+      </div>
+
+      <div class="field-group full">
+        <label>Terminal del Nicho *</label>
+        <input type="hidden" id="d${idx}_terminal" value="">
+        <div class="toggle-group" style="flex-wrap:wrap;gap:6px;">
+          ${['A','B','C','D','E','F','G','H','I','J','K'].map(l =>
+            `<button class="toggle-btn" style="flex:0 0 calc(20% - 6px);padding:8px 4px;font-size:13px;"
+              onclick="setDifuntoToggle(${idx},'terminal','${l}',this);actualizarNicho(${idx})">${l}</button>`
+          ).join('')}
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Posición *</label>
+        <select id="d${idx}_posicion" onchange="actualizarNicho(${idx})">
+          <option value="">Selecciona...</option>
+          ${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}">${n}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label>Número de Nicho (auto)</label>
+        <input type="text" id="d${idx}_numero_nicho" readonly
+          style="background:#f0f7ff;color:var(--navy);font-weight:700;font-size:15px;"
+          placeholder="Se genera solo">
+      </div>
+
+      <div class="field-group full" id="d${idx}_datos_difunto">
+        <label>Nombre del Difunto</label>
+        <input type="text" id="d${idx}_nombre_difunto" placeholder="Nombre completo del difunto">
+      </div>
+
+      <div class="field-group" id="d${idx}_fecha_wrap">
+        <label>Fecha de Fallecimiento</label>
+        <input type="date" id="d${idx}_fecha_fallecimiento">
+      </div>
+
+      <div class="field-group full">
+        <label>Observaciones</label>
+        <textarea id="d${idx}_observaciones" rows="2" placeholder="Observaciones del nicho..."></textarea>
+      </div>
+
+    </div>
+  `;
+
+  document.getElementById('difuntos-container').appendChild(div);
+
+  // Actualizar número de nicho con georeferencia actual
+  actualizarNicho(idx);
+
+  // Scroll al nuevo difunto
+  div.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Elimina un bloque de difunto
+function eliminarDifunto(idx) {
+  const el = document.getElementById('difunto-' + idx);
+  if (el) el.remove();
+}
+
+// Toggle para campos de difunto (estado, terminal)
+function setDifuntoToggle(idx, campo, val, btn) {
+  document.getElementById('d'+idx+'_'+campo).value = val;
+  btn.closest('.toggle-group').querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// Genera el código del nicho: GEOREF-TERMINAL-POSICION
+function actualizarNicho(idx) {
+  const georef   = document.getElementById('f4_georeferencia')?.value || '';
+  const terminal = document.getElementById('d'+idx+'_terminal')?.value || '';
+  const posicion = document.getElementById('d'+idx+'_posicion')?.value || '';
+  const nicho    = document.getElementById('d'+idx+'_numero_nicho');
+  if (nicho) {
+    nicho.value = [georef, terminal, posicion].filter(Boolean).join('-');
+  }
+}
+
+// Actualiza todos los nichos cuando cambia la georeferencia
+function actualizarGeoreferencia4() {
+  const cem    = document.getElementById('f4_cementerio')?.value || '';
+  const sector = document.getElementById('f4_sector')?.value    || '';
+  const manz   = document.getElementById('f4_manzana')?.value   || '';
+  const lote   = document.getElementById('f4_num_lote')?.value  || '';
+  const ref    = document.getElementById('f4_georeferencia');
+  if (ref) {
+    ref.value = [cem, sector, manz, lote].filter(Boolean).join('-');
+    // Actualizar todos los nichos existentes
+    for (let i = 1; i <= contadorDifuntos; i++) {
+      if (document.getElementById('difunto-' + i)) actualizarNicho(i);
+    }
+  }
+}
+
+// SUBMIT del formulario de cementerio
+function submitForm4() {
+  const btn = document.querySelector('#view-form4 .btn-submit');
+  if (btn && btn.classList.contains('processing')) return;
+
+  // Validar campos de la bóveda
+  const requeridos = ['f4_cementerio','f4_sector','f4_manzana','f4_num_lote',
+                      'f4_nombre_cementerio','f4_status_lote','f4_nombre_boveda',
+                      'f4_materiales','f4_condiciones','f4_fecha','f4_levantado_por'];
+  let valid = true, firstErr = null;
+  requeridos.forEach(function(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!el.value.trim()) { el.classList.add('error'); valid=false; if(!firstErr) firstErr=el; }
+    else el.classList.remove('error');
+  });
+
+  if (!valid) {
+    showToast('⚠️ Completa los campos obligatorios de la bóveda');
+    if (firstErr) firstErr.scrollIntoView({ behavior:'smooth', block:'center' });
+    return;
+  }
+
+  // Verificar que haya al menos 1 difunto/nicho
+  const difuntosEls = document.querySelectorAll('#difuntos-container .difunto-card');
+  if (!difuntosEls.length) {
+    showToast('⚠️ Agrega al menos un nicho con el botón ➕ Agregar difunto');
+    return;
+  }
+
+  if (btn) { btn.classList.add('processing'); btn.textContent='✅ Guardando...'; btn.style.opacity='0.7'; }
+
+  // Recopilar datos de la bóveda
+  const photoData = document.getElementById('f4_photo_data')?.value || '';
+  const dataBoveda = {
+    cementerio:       document.getElementById('f4_cementerio')?.value       || '',
+    sector:           document.getElementById('f4_sector')?.value           || '',
+    manzana:          document.getElementById('f4_manzana')?.value          || '',
+    num_lote:         document.getElementById('f4_num_lote')?.value         || '',
+    georeferencia:    document.getElementById('f4_georeferencia')?.value    || '',
+    nombre_cementerio:document.getElementById('f4_nombre_cementerio')?.value|| '',
+    status_lote:      document.getElementById('f4_status_lote')?.value      || '',
+    nombre_boveda:    document.getElementById('f4_nombre_boveda')?.value    || '',
+    cant_nichos:      document.getElementById('f4_cant_nichos')?.value      || '0',
+    cant_niveles:     document.getElementById('f4_cant_niveles')?.value     || '0',
+    materiales:       document.getElementById('f4_materiales')?.value       || '',
+    condiciones:      document.getElementById('f4_condiciones')?.value      || '',
+    lat:              document.getElementById('f4_lat')?.value              || '',
+    lng:              document.getElementById('f4_lng')?.value              || '',
+    maps_url:         document.getElementById('f4_maps_url')?.value         || '',
+    fecha:            document.getElementById('f4_fecha')?.value            || '',
+    levantado_por:    document.getElementById('f4_levantado_por')?.value    || '',
+  };
+
+  // Recopilar nichos/difuntos
+  const nichos = [];
+  difuntosEls.forEach(function(card) {
+    const id = card.id.replace('difunto-', '');
+    nichos.push({
+      estado:            document.getElementById('d'+id+'_estado')?.value            || '',
+      terminal:          document.getElementById('d'+id+'_terminal')?.value          || '',
+      posicion:          document.getElementById('d'+id+'_posicion')?.value          || '',
+      numero_nicho:      document.getElementById('d'+id+'_numero_nicho')?.value      || '',
+      nombre_difunto:    document.getElementById('d'+id+'_nombre_difunto')?.value    || '',
+      fecha_fallecimiento:document.getElementById('d'+id+'_fecha_fallecimiento')?.value || '',
+      observaciones:     document.getElementById('d'+id+'_observaciones')?.value     || '',
+    });
+  });
+
+  // Crear UN registro por cada nicho/difunto con los datos de la bóveda incluidos
+  const registros = nichos.map(function(nicho, i) {
+    return Object.assign({}, dataBoveda, nicho, {
+      formId:    4,
+      sheet:     'Cementerios_Bovedas',
+      formName:  'Cementerios y Bóvedas',
+      userId:    currentUser.id,
+      userName:  currentUser.nombre,
+      status:    'pending',
+      fecha:     new Date().toISOString(),
+      localId:   Date.now() + i,  // ID único por nicho
+      nicho_num: i + 1,           // número de nicho en esta bóveda
+    });
+  });
+
+  // Guardar todos en localStorage
+  try {
+    const cache = JSON.parse(localStorage.getItem('registros_cache') || '[]');
+    registros.forEach(function(r) {
+      const localData = Object.assign({}, r);
+      delete localData.photo_data;
+      localData.tiene_foto = photoData ? 'Si' : 'No';
+      cache.push(localData);
+    });
+    localStorage.setItem('registros_cache', JSON.stringify(cache));
+  } catch(e) { console.warn('localStorage:', e); }
+
+  // Guardar foto en IndexedDB (una sola foto para toda la bóveda)
+  if (photoData && registros.length > 0) {
+    guardarFotoLocal(registros[0].localId, photoData);
+  }
+
+  // Rehabilitar botón y mostrar éxito
+  if (btn) { btn.classList.remove('processing'); btn.textContent='💾 Guardar registro'; btn.style.opacity='1'; }
+
+  const totalNichos = nichos.length;
+  const ocupados    = nichos.filter(n => n.estado === 'OCUPADO').length;
+  const vacios      = totalNichos - ocupados;
+
+  resetFormCementerio();
+  updatePending();
+  showOkModal(
+    '✅ Bóveda guardada',
+    totalNichos + ' nichos registrados (' + ocupados + ' ocupados, ' + vacios + ' vacíos).' +
+    (isOnline ? ' Enviando a Google Sheets...' : ' Se enviará al conectarse.')
+  );
+
+  // Enviar al servidor en segundo plano
+  if (isOnline) {
+    registros.forEach(function(r, i) {
+      var sendData = Object.assign({}, r);
+      if (i === 0) sendData.photo_data = photoData;
+      window.setTimeout(function() {
+        sendToSheets(sendData)
+          .then(function() { updateCacheStatus(r.localId, 'synced'); })
+          .catch(function() {});
+      }, 800 + (i * 300));
+    });
+  }
+}
+
+// Reset del formulario de cementerio
+function resetFormCementerio() {
+  // Limpiar campos de bóveda
+  ['f4_cementerio','f4_sector','f4_manzana','f4_num_lote','f4_nombre_boveda',
+   'f4_georeferencia','f4_lat','f4_lng','f4_maps_url','f4_fecha','f4_photo_data'].forEach(function(id) {
+    const el = document.getElementById(id); if (el) { el.value = ''; el.classList.remove('error'); }
+  });
+  ['f4_cant_nichos','f4_cant_niveles'].forEach(function(id) {
+    const el = document.getElementById(id); if (el) el.value = '0';
+  });
+  ['f4_nombre_cementerio','f4_status_lote','f4_materiales','f4_condiciones'].forEach(function(id) {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  // Reset toggles
+  document.querySelectorAll('#view-form4 .toggle-btn').forEach(b => b.classList.remove('active'));
+
+  // Limpiar foto
+  const prev = document.getElementById('f4_photo_preview');
+  if (prev) { prev.style.display='none'; prev.src=''; }
+  const ph = document.getElementById('f4_photo_ph');
+  if (ph) ph.style.display='flex';
+
+  // Limpiar GPS
+  const gps = document.getElementById('f4_gps_coords');
+  if (gps) gps.textContent = 'Sin ubicación capturada';
+
+  // Limpiar difuntos
+  document.getElementById('difuntos-container').innerHTML = '';
+  contadorDifuntos = 0;
+
+  setTodayDates();
+  prefillLevantadoPor();
+}
