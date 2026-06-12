@@ -1,3 +1,6 @@
+bash
+
+cat > /home/claude/index_fixed.html << 'ENDOFFILE'
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -18,39 +21,10 @@
 /* ===== DIFUNTO CARD ===== */
 .difunto-card {
   background: #f0f7ff;
-  border: 1.5px solid #bee3f8;
-  border-radius: 14px;
-  padding: 16px;
-  margin: 0 16px 14px;
-}
-.difunto-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-.btn-add-nicho {
-  width: calc(100% - 32px);
-  margin: 8px 16px 16px;
-  padding: 14px;
-  background: #eff6ff;
-  border: 2px dashed #93c5fd;
-  border-radius: 14px;
-  color: var(--navy);
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  display: block;
-}
-.btn-add-nicho:active { background: #dbeafe; }
-</style>
-<style>
-.difunto-card {
-  background: #f0f7ff;
   border: 2px solid #93c5fd;
   border-radius: 14px;
   padding: 16px;
-  margin: 0 16px 14px;
+  margin: 0 0 14px;
 }
 .difunto-card-header {
   display: flex;
@@ -80,8 +54,8 @@
 }
 .btn-add-nicho {
   display: block;
-  width: calc(100% - 32px);
-  margin: 4px 16px 16px;
+  width: 100%;
+  margin: 4px 0 16px;
   padding: 14px;
   background: #eff6ff;
   border: 2px dashed #93c5fd;
@@ -91,6 +65,7 @@
   font-weight: 700;
   cursor: pointer;
   text-align: center;
+  font-family: inherit;
 }
 .btn-add-nicho:active { background: #dbeafe; }
 .nicho-auto {
@@ -292,11 +267,11 @@
       </div>
     </div>
 
-    <!-- FORM 4: CEMENTERIO — BÓVEDA + NICHOS DINÁMICOS -->
+    <!-- FORM 4: CEMENTERIO — BÓVEDA + DIFUNTOS DINÁMICOS -->
     <div id="view-form4" class="view">
       <div class="form-scroll">
 
-        <!-- PARTE 1: DATOS DE LA BÓVEDA -->
+        <!-- PARTE 1: DATOS DE LA BÓVEDA — SIN CAMBIOS -->
         <div class="form-section-header" style="background:var(--navy)">
           <div class="section-icon">🏛️</div>
           <div><div class="section-title">Datos de la Bóveda</div><div class="section-sub">Se llena una sola vez por bóveda</div></div>
@@ -374,32 +349,32 @@
           <div class="field-group"><label>Levantado por *</label><input type="text" id="f4_levantado_por" placeholder="Nombre del empleado"></div>
         </div>
 
-        <!-- PARTE 2: NICHOS DINÁMICOS -->
+        <!-- PARTE 2: DIFUNTOS DINÁMICOS — CORREGIDO -->
         <div class="form-section-header" style="background:#2a5580;margin-top:8px;">
           <div class="section-icon">⚰️</div>
           <div>
-            <div class="section-title">Nichos de la Bóveda</div>
-            <div class="section-sub">Agrega cada nicho — ocupado o vacío</div>
+            <div class="section-title">Personas Fallecidas</div>
+            <div class="section-sub">Agrega cada difunto de esta bóveda</div>
           </div>
         </div>
 
-        <!-- Contenedor de nichos -->
-        <div id="nichos-container"></div>
+        <!-- Contenedor de difuntos -->
+        <div id="difuntos-container"></div>
 
-        <!-- Botón agregar nicho -->
-        <button class="btn-add-nicho" onclick="agregarNicho()">+ Agregar nicho</button>
+        <!-- Botón agregar difunto -->
+        <button class="btn-add-nicho" onclick="agregarDifunto()">➕ Agregar difunto</button>
 
-        <button class="btn-submit" onclick="submitFormCementerio()">💾 Guardar bóveda y nichos</button>
+        <button class="btn-submit" onclick="submitForm4()">💾 Guardar bóveda y difuntos</button>
       </div>
     </div>
 
-    <!-- VISTAS DE DATOS -->
+    <!-- VISTAS DE DATOS — SIN CAMBIOS -->
     <div id="view-history" class="view">
       <div class="filter-bar">
         <select id="history-filter" onchange="renderHistory()">
           <option value="">Todos los formularios</option>
           <option value="1">Contribuyentes</option><option value="2">Datos</option><option value="3">Construcción</option>
-          <option value="4">Cementerios y Bóvedas</option><option value="5">Difuntos</option>
+          <option value="4">Cementerios y Bóvedas</option>
         </select>
         <select id="history-status" onchange="renderHistory()">
           <option value="">Todos los estados</option><option value="pending">Pendientes</option><option value="synced">Sincronizados</option>
@@ -448,7 +423,7 @@
       <div class="consulta-search-bar"><input type="text" id="consulta-search" placeholder="Buscar por nombre, cédula, RMC, georeferencia..." oninput="filtrarConsulta()"></div>
       <div class="consulta-filters">
         <select id="consulta-form" onchange="filtrarConsulta()">
-          <option value="">Todos los formularios</option><option value="1">Contribuyentes</option><option value="2">Datos</option><option value="3">Construcción</option><option value="4">Cementerios</option><option value="5">Difuntos</option>
+          <option value="">Todos los formularios</option><option value="1">Contribuyentes</option><option value="2">Datos</option><option value="3">Construcción</option><option value="4">Cementerios</option>
         </select>
         <select id="consulta-poligono" onchange="filtrarConsulta()">
           <option value="">Todos los polígonos</option><option>I</option><option>II</option><option>III</option><option>IV</option><option>V</option><option>VI</option><option>VII</option><option>VIII</option><option>IX</option><option>X</option><option>XI</option>
@@ -474,7 +449,7 @@
   </div>
 </div>
 
-<!-- MODALES -->
+<!-- MODALES — SIN CAMBIOS -->
 <div id="modal-user" class="modal-overlay" style="display:none">
   <div class="modal-box">
     <div class="modal-head"><h3 id="modal-user-title">Nuevo Usuario</h3><button class="modal-close" onclick="closeUserModal()">✕</button></div>
@@ -524,3 +499,4 @@
 <script src="app.js"></script>
 </body>
 </html>
+ENDOFFILE
