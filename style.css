@@ -663,3 +663,58 @@ html, body {
   transition: background 0.15s;
 }
 .btn-agregar-difunto:active { background: #dbeafe; }
+/* ===== NICHOS ===== */
+
+.nicho-card{
+  background:#f8faff;
+  border:1.5px solid #bee3f8;
+  border-radius:14px;
+  padding:16px;
+  margin-bottom:14px;
+}
+
+.nicho-fields{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:12px;
+}
+
+.toggle-group-wrap{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:6px;
+}
+
+.toggle-btn-sm{
+  padding:8px 12px;
+  border:1.5px solid var(--border);
+  border-radius:8px;
+  background:#fff;
+  color:var(--muted);
+  cursor:pointer;
+  font-size:12px;
+  font-weight:600;
+  transition:.15s;
+}
+
+.toggle-btn-sm.active{
+  background:var(--navy);
+  color:#fff;
+  border-color:var(--navy);
+}
+
+.btn-remove-nicho{
+  background:#fee2e2;
+  color:var(--danger);
+  border:none;
+  padding:10px 14px;
+  border-radius:10px;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.btn-remove-nicho:hover{
+  opacity:.9;
+}
