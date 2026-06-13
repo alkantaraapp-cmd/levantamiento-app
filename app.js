@@ -941,8 +941,9 @@ function actualizarCodigoNicho(idx) {
 function agregarNicho() {
   nichoContador++;
   var idx = nichoContador;
-  nichosData.push({ idx:idx, estado:'', terminal:'', posicion:'', nombre:'', fecha_fallecimiento:'', observaciones:'', foto:'' });
-
+  nichosData.push({ idx:idx, estado:'', terminal:'', posicion:'', nombre:'', fecha_fallecimiento:'', observaciones:'', foto: document.getElementById('f4_photo_data')?.value || ''
+});
+   
   var container = document.getElementById('nichos-container');
   var div = document.createElement('div');
   div.className = 'nicho-card';
