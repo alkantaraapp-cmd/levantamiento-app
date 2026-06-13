@@ -984,19 +984,6 @@ function agregarNicho() {
       '<div class="field-group"><label>Fecha de Fallecimiento</label>' +
         '<input type="text" id="nicho-fecha-' + idx + '" placeholder="dd/mm/aaaa" inputmode="numeric" pattern="[0-9/]*" maxlength="10">' +
         '</div>' +
-        '<div class="field-group full"><label>Foto del Nicho</label>' +
-        '<div class="photo-box">' +
-          '<img id="nicho-photo-preview-' + idx + '" style="display:none;max-width:100%;max-height:160px;border-radius:8px;object-fit:cover;">' +
-          '<div class="photo-placeholder" id="nicho-photo-ph-' + idx + '"><span>📷</span><span>Foto del nicho</span></div>' +
-          '<div class="photo-btns">' +
-            '<button class="btn-photo" id="nicho-cam-btn-' + idx + '">📷 Cámara</button>' +
-            '<button class="btn-photo" id="nicho-gal-btn-' + idx + '">🖼 Galería</button>' +
-          '</div>' +
-          '<input type="file" id="nicho-cam-' + idx + '" accept="image/*" capture="environment" style="display:none">' +
-          '<input type="file" id="nicho-gal-' + idx + '" accept="image/*" style="display:none">' +
-        '</div>' +
-        '<input type="hidden" id="nicho-photo-' + idx + '">' +
-      '</div>' +
       '<div class="field-group full"><label>Observaciones</label>' +
         '<textarea id="nicho-obs-' + idx + '" rows="2" placeholder="Observaciones del nicho..."></textarea>' +
       '</div>' +
@@ -1015,11 +1002,7 @@ function agregarNicho() {
   document.getElementById('nicho-nombre-'   + idx).addEventListener('input',  function() { setNichoNombre(idx, this.value); });
   document.getElementById('nicho-fecha-'    + idx).addEventListener('change', function() { setNichoFecha(idx, this.value); });
   document.getElementById('nicho-obs-'      + idx).addEventListener('input',  function() { setNichoObs(idx, this.value); });
-  document.getElementById('nicho-cam-btn-'  + idx).addEventListener('click',  function() { document.getElementById('nicho-cam-' + idx).click(); });
-  document.getElementById('nicho-gal-btn-'  + idx).addEventListener('click',  function() { document.getElementById('nicho-gal-' + idx).click(); });
-  document.getElementById('nicho-cam-'      + idx).addEventListener('change', function() { handleNichoPhoto(idx, this); });
-  document.getElementById('nicho-gal-'      + idx).addEventListener('change', function() { handleNichoPhoto(idx, this); });
-
+  
   actualizarContadorNichos();
   div.scrollIntoView({ behavior:'smooth', block:'start' });
 }
