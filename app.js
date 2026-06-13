@@ -941,7 +941,7 @@ function actualizarCodigoNicho(idx) {
 function agregarNicho() {
   nichoContador++;
   var idx = nichoContador;
-  nichosData.push({ idx:idx, estado:'', terminal:'', posicion:'', nombre:'', fecha_fallecimiento:'', edad:'', observaciones:'', foto:'' });
+  nichosData.push({ idx:idx, estado:'', terminal:'', posicion:'', nombre:'', fecha_fallecimiento:'', observaciones:'', foto:'' });
 
   var container = document.getElementById('nichos-container');
   var div = document.createElement('div');
@@ -1014,7 +1014,6 @@ function agregarNicho() {
   document.getElementById('nicho-posicion-' + idx).addEventListener('change', function() { setNichoPosicion(idx, this.value); });
   document.getElementById('nicho-nombre-'   + idx).addEventListener('input',  function() { setNichoNombre(idx, this.value); });
   document.getElementById('nicho-fecha-'    + idx).addEventListener('change', function() { setNichoFecha(idx, this.value); });
-  document.getElementById('nicho-edad-'     + idx).addEventListener('input',  function() { setNichoEdad(idx, this.value); });
   document.getElementById('nicho-obs-'      + idx).addEventListener('input',  function() { setNichoObs(idx, this.value); });
   document.getElementById('nicho-cam-btn-'  + idx).addEventListener('click',  function() { document.getElementById('nicho-cam-' + idx).click(); });
   document.getElementById('nicho-gal-btn-'  + idx).addEventListener('click',  function() { document.getElementById('nicho-gal-' + idx).click(); });
