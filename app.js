@@ -982,12 +982,9 @@ function agregarNicho() {
         '<input type="text" id="nicho-nombre-' + idx + '" placeholder="Nombre o VACÍO">' +
       '</div>' +
       '<div class="field-group"><label>Fecha de Fallecimiento</label>' +
-        '<input type="date" id="nicho-fecha-' + idx + '">' +
-      '</div>' +
-      '<div class="field-group"><label>Edad al fallecer</label>' +
-        '<input type="number" id="nicho-edad-' + idx + '" placeholder="Años" min="0" inputmode="numeric">' +
-      '</div>' +
-      '<div class="field-group full"><label>Foto del Nicho</label>' +
+        '<input type="text" id="nicho-fecha-' + idx + '" placeholder="DD/MM/AAAA">' +
+        '</div>' +
+        '<div class="field-group full"><label>Foto del Nicho</label>' +
         '<div class="photo-box">' +
           '<img id="nicho-photo-preview-' + idx + '" style="display:none;max-width:100%;max-height:160px;border-radius:8px;object-fit:cover;">' +
           '<div class="photo-placeholder" id="nicho-photo-ph-' + idx + '"><span>📷</span><span>Foto del nicho</span></div>' +
