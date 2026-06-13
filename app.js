@@ -1085,12 +1085,12 @@ function submitFormCementerio() {
       localStorage.setItem('registros_cache', JSON.stringify(cache));
     } catch(e) {}
 
-    if (i === 0 && photoData) guardarFotoLocal(localId, photoData);
+    if (photoData) guardarFotoLocal(localId, photoData);
     if (nicho.foto) guardarFotoLocal(localId + '_nicho', nicho.foto);
 
     if (isOnline) {
       var dataConFoto = Object.assign({}, registro);
-      if (i === 0) dataConFoto.photo_data = photoData;
+      if (photoData) dataConFoto.photo_data = photoData;
       if (nicho.foto) dataConFoto.foto_nicho_data = nicho.foto;
       window.setTimeout(function() {
         sendToSheets(dataConFoto)
