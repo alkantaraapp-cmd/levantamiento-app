@@ -1091,8 +1091,8 @@ function submitFormCementerio() {
 
     if (isOnline) {
       var dataConFoto = Object.assign({}, registro);
-      if (photoData) dataConFoto.photo_data = photoData;
-      if (nicho.foto) dataConFoto.foto_nicho_data = nicho.foto;
+      // Si el nicho no tiene foto propia, usa la foto de la bóveda
+       dataConFoto.photo_data = nicho.foto || photoData;
       window.setTimeout(function() {
         sendToSheets(dataConFoto)
           .then(function() { updateCacheStatus(localId,'synced'); })
